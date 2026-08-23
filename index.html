@@ -169,7 +169,7 @@
 
   <button id="powerBtn" class="power-btn">POWER ON RADIO</button>
   
-  <div id="logBox" class="log-box">System ready. Select Unit & Power On.</div>
+  <div id="logBox" class="log-box">Select Unit & Power On.</div>
 
   <audio id="speakerOutput" autoplay playsinline></audio>
 
@@ -235,6 +235,10 @@
     async function togglePower() {
       const ctx = getAudioContext();
 
+      // Pre-unlock speaker element with user interaction
+      speakerOutput.muted = true;
+      speakerOutput.play().catch(() => {});
+
       if (!isPoweredOn) {
         powerBtn.innerText = "CONNECTING...";
         powerBtn.disabled = true;
@@ -249,10 +253,8 @@
         log(`Starting as ${myUnit.toUpperCase()} on ${channel.toUpperCase()}`);
 
         try {
+          // Keep audio track ALWAYS enabled for 100% active WebRTC Opus codec negotiation
           micStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-          
-          // Start with mic track unmuted so the WebRTC connection negotiates active audio
-          micStream.getAudioTracks().forEach(t => t.enabled = false);
 
           const source = ctx.createMediaStreamSource(micStream);
           micAnalyser = ctx.createAnalyser();
@@ -309,16 +311,15 @@
             }
           });
 
-          // Inbound Voice Call
+          // Handle incoming call
           peer.on("call", (call) => {
-            log("Voice call connected.");
             activeMediaCall = call;
             call.answer(micStream);
             
             call.on("stream", (remoteStream) => {
-              log("Audio link active.");
+              log("Voice link active.");
               speakerOutput.srcObject = remoteStream;
-              speakerOutput.muted = false;
+              speakerOutput.muted = true; // Speaker remains muted until peer presses PTT
               speakerOutput.volume = 1.0;
               speakerOutput.play().catch(() => {});
             });
@@ -329,7 +330,7 @@
             });
           });
 
-          // Inbound Data Connection (PTT Trigger)
+          // Handle incoming data connection
           peer.on("connection", (conn) => {
             activeDataConn = conn;
             bindDataEvents(conn);
@@ -379,9 +380,9 @@
       const call = peer.call(targetPeerId, micStream);
       activeMediaCall = call;
       call.on("stream", (remoteStream) => {
-        log("Audio link active.");
+        log("Voice link active.");
         speakerOutput.srcObject = remoteStream;
-        speakerOutput.muted = false;
+        speakerOutput.muted = true;
         speakerOutput.volume = 1.0;
         speakerOutput.play().catch(() => {});
       });
@@ -400,12 +401,16 @@
 
       conn.on("data", (data) => {
         if (data === "TX_ON") {
+          speakerOutput.muted = false;
           playChirp();
           statusBadge.innerText = "RECEIVING (RX)";
           statusBadge.className = "status-badge rx";
+          log("RX Active");
         } else if (data === "TX_OFF") {
+          speakerOutput.muted = true;
           statusBadge.innerText = "READY";
           statusBadge.className = "status-badge rx";
+          log("RX Standby");
         }
       });
 
@@ -417,13 +422,10 @@
     }
 
     function startTransmit() {
-      if (!isPoweredOn || isTransmitting || !micStream) return;
+      if (!isPoweredOn || isTransmitting) return;
       isTransmitting = true;
       getAudioContext();
       playChirp();
-
-      // Enable microphone track so live audio flows through WebRTC
-      micStream.getAudioTracks().forEach(t => t.enabled = true);
 
       pttBtn.classList.add("active");
       statusBadge.innerText = "TRANSMITTING (TX)";
@@ -436,11 +438,8 @@
     }
 
     function stopTransmit() {
-      if (!isTransmitting || !micStream) return;
+      if (!isTransmitting) return;
       isTransmitting = false;
-
-      // Mute microphone track
-      micStream.getAudioTracks().forEach(t => t.enabled = false);
 
       pttBtn.classList.remove("active");
       statusBadge.innerText = (activeDataConn && activeDataConn.open) ? "READY" : "STANDBY";
