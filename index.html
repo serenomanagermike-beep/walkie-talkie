@@ -143,6 +143,7 @@
   <div id="audioContainer"></div>
 
   <script>
+    <script>
     const myId = "ptt-" + Math.floor(Math.random() * 899999 + 100000);
     let peer = null;
     let localStream = null;
@@ -163,26 +164,37 @@
       logBox.innerHTML = `> ${msg}<br>` + logBox.innerHTML;
     }
 
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    // Audio Context & Chirp
+    let audioCtx = null;
+    function getAudioContext() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === "suspended") {
+        audioCtx.resume();
+      }
+      return audioCtx;
+    }
+
     function playChirp() {
       try {
-        if (audioCtx.state === "suspended") audioCtx.resume();
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
+        const ctx = getAudioContext();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
         osc.connect(gain);
-        gain.connect(audioCtx.destination);
+        gain.connect(ctx.destination);
         osc.type = "sine";
-        osc.frequency.setValueAtTime(1800, audioCtx.currentTime);
-        osc.frequency.setValueAtTime(2400, audioCtx.currentTime + 0.05);
-        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
-        gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.12);
+        osc.frequency.setValueAtTime(1800, ctx.currentTime);
+        osc.frequency.setValueAtTime(2400, ctx.currentTime + 0.05);
+        gain.gain.setValueAtTime(0.3, ctx.currentTime);
+        gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.12);
         osc.start();
-        osc.stop(audioCtx.currentTime + 0.12);
+        osc.stop(ctx.currentTime + 0.12);
       } catch (e) {}
     }
 
     async function togglePower() {
-      if (audioCtx.state === "suspended") await audioCtx.resume();
+      getAudioContext();
 
       if (!isPoweredOn) {
         powerBtn.innerText = "CONNECTING...";
@@ -190,7 +202,7 @@
         log("Accessing microphone...");
 
         try {
-          // 1. Get Live Mic Stream optimized for voice & mobile Chrome
+          // 1. Get Live Mic Stream
           localStream = await navigator.mediaDevices.getUserMedia({
             audio: {
               echoCancellation: true,
@@ -200,9 +212,11 @@
             video: false
           });
 
-          // Mute mic tracks by default (RX Standby)
-          localStream.getAudioTracks().forEach(track => track.enabled = false);
-          log("Microphone ready (Muted/RX).");
+          // Ensure mic starts muted for TX Standby
+          localStream.getAudioTracks().forEach(track => {
+            track.enabled = false;
+          });
+          log("Microphone initialized (Standby).");
 
           // 2. Initialize PeerJS with explicit STUN servers
           peer = new Peer(myId, {
@@ -286,14 +300,29 @@
           audio.setAttribute("playsinline", "true");
           audioContainer.appendChild(audio);
         }
+        
         audio.srcObject = remoteStream;
-        audio.play().catch(e => {
-          log("Tap screen to enable audio output");
-        });
-        log("Audio pipeline active: " + call.peer);
+        
+        const playPromise = audio.play();
+        if (playPromise !== undefined) {
+          playPromise
+            .then(() => {
+              log("Audio playing for " + call.peer);
+            })
+            .catch(e => {
+              log("Autoplay blocked. Tap screen.");
+              // Fallback unlock listener
+              const unlock = () => {
+                audio.play();
+                document.removeEventListener("click", unlock);
+                document.removeEventListener("touchstart", unlock);
+              };
+              document.addEventListener("click", unlock);
+              document.addEventListener("touchstart", unlock);
+            });
+        }
       });
 
-      // Monitor connection health
       if (call.peerConnection) {
         call.peerConnection.oniceconnectionstatechange = () => {
           const state = call.peerConnection.iceConnectionState;
@@ -335,7 +364,7 @@
           const message = JSON.parse(data.message);
           
           if (message.id && message.id !== myId && message.action === "join") {
-            // Glare prevention: Only the peer with the lexicographically higher ID initiates the call
+            // Glare prevention: higher ID initiates the call
             if (!activeCalls[message.id] && myId > message.id) {
               log("Calling peer: " + message.id);
               const call = peer.call(message.id, localStream);
@@ -358,37 +387,51 @@
     function startTransmit() {
       if (!isPoweredOn || isTransmitting || !localStream) return;
       isTransmitting = true;
+      getAudioContext();
       playChirp();
+      
       pttBtn.classList.add("active");
       statusBadge.innerText = "TRANSMITTING (TX)";
       statusBadge.className = "status-badge tx";
 
-      // Unmute live audio track directly in WebRTC pipeline
-      localStream.getAudioTracks().forEach(t => t.enabled = true);
-      log("TX Live (Mic Unmuted)");
+      // Unmute microphone track
+      localStream.getAudioTracks().forEach(track => {
+        track.enabled = true;
+      });
+      log("TX Live (Mic Active)");
     }
 
     function stopTransmit() {
       if (!isTransmitting || !localStream) return;
       isTransmitting = false;
+      
       pttBtn.classList.remove("active");
       statusBadge.innerText = "RX STANDBY";
       statusBadge.className = "status-badge rx";
 
-      // Mute audio track
-      localStream.getAudioTracks().forEach(t => t.enabled = false);
+      // Mute microphone track
+      localStream.getAudioTracks().forEach(track => {
+        track.enabled = false;
+      });
       log("RX Standby (Mic Muted)");
     }
 
     powerBtn.addEventListener("click", togglePower);
 
     // Mobile touch controls
-    pttBtn.addEventListener("touchstart", (e) => { e.preventDefault(); startTransmit(); });
-    pttBtn.addEventListener("touchend", (e) => { e.preventDefault(); stopTransmit(); });
+    pttBtn.addEventListener("touchstart", (e) => { 
+      e.preventDefault(); 
+      startTransmit(); 
+    });
+    pttBtn.addEventListener("touchend", (e) => { 
+      e.preventDefault(); 
+      stopTransmit(); 
+    });
 
-    // Desktop/Laptop controls
+    // Desktop controls
     pttBtn.addEventListener("mousedown", startTransmit);
     pttBtn.addEventListener("mouseup", stopTransmit);
+  </script>
   </script>
 </body>
 </html>
