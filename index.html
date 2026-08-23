@@ -12,17 +12,19 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="theme-color" content="#0a0f1d" />
+  <meta name="theme-color" content="#070b14" />
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
 
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700;800&family=Inter:wght@500;700;900&display=swap');
+
     * { box-sizing: border-box; user-select: none; -webkit-user-select: none; margin: 0; padding: 0; }
     
     body {
-      background: linear-gradient(180deg, #0f172a 0%, #020617 100%);
+      background: radial-gradient(circle at 50% 10%, #172554 0%, #070b14 100%);
       color: #f8fafc;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-family: 'Inter', -apple-system, sans-serif;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -39,30 +41,31 @@
       padding-top: 2px;
     }
     .header h1 {
-      font-size: 1.35rem;
+      font-family: 'Chakra Petch', sans-serif;
+      font-size: 1.55rem;
       letter-spacing: 4px;
-      font-weight: 900;
+      font-weight: 800;
       color: #38bdf8;
-      text-shadow: 0 0 14px rgba(56, 189, 248, 0.45);
+      text-shadow: 0 0 16px rgba(56, 189, 248, 0.5);
     }
     .header .tagline {
-      font-size: 0.65rem;
-      color: #94a3b8;
-      letter-spacing: 2px;
+      font-family: 'Chakra Petch', sans-serif;
+      font-size: 0.7rem;
+      color: #64748b;
+      letter-spacing: 2.5px;
       text-transform: uppercase;
       font-weight: 700;
       margin-top: 2px;
     }
 
     .screen {
-      background: rgba(15, 23, 42, 0.85);
-      border: 1px solid rgba(56, 189, 248, 0.2);
-      box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.6), 0 8px 24px rgba(0, 0, 0, 0.4);
-      backdrop-filter: blur(12px);
-      border-radius: 16px;
+      background: linear-gradient(180deg, rgba(15, 23, 42, 0.95) 0%, rgba(10, 15, 30, 0.98) 100%);
+      border: 1.5px solid #1e293b;
+      box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.7), 0 8px 30px rgba(0, 0, 0, 0.5);
+      border-radius: 18px;
       width: 100%;
       max-width: 380px;
-      padding: 12px;
+      padding: 14px 12px;
       text-align: center;
     }
 
@@ -70,122 +73,131 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 10px;
-      padding: 0 2px;
+      margin-bottom: 12px;
+      padding: 0 4px;
     }
 
     .status-badge {
-      display: inline-block;
-      padding: 5px 14px;
-      border-radius: 20px;
-      font-weight: 800;
-      font-size: 0.75rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 10px;
+      font-family: 'Chakra Petch', sans-serif;
+      font-weight: 700;
+      font-size: 0.78rem;
       letter-spacing: 1px;
-      background: #1e293b;
-      color: #94a3b8;
-      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: #0f172a;
+      color: #64748b;
+      border: 1px solid #1e293b;
       transition: all 0.2s ease;
     }
     .status-badge.tx {
-      background: #dc2626;
+      background: linear-gradient(180deg, #ef4444 0%, #dc2626 100%);
       color: #ffffff;
-      box-shadow: 0 0 16px rgba(220, 38, 38, 0.7);
-      border-color: #ef4444;
+      box-shadow: 0 0 16px rgba(239, 68, 68, 0.7);
+      border-color: #f87171;
     }
     .status-badge.rx {
-      background: #16a34a;
+      background: linear-gradient(180deg, #10b981 0%, #059669 100%);
       color: #ffffff;
-      box-shadow: 0 0 16px rgba(22, 163, 74, 0.7);
+      box-shadow: 0 0 16px rgba(16, 185, 129, 0.7);
       animation: pulse 0.6s infinite alternate;
-      border-color: #4ade80;
+      border-color: #34d399;
     }
     .status-badge.online {
-      background: #0284c7;
+      background: linear-gradient(180deg, #0284c7 0%, #0369a1 100%);
       color: #ffffff;
-      box-shadow: 0 0 12px rgba(2, 132, 199, 0.4);
+      box-shadow: 0 0 12px rgba(2, 132, 199, 0.5);
       border-color: #38bdf8;
     }
 
     @keyframes pulse {
-      from { opacity: 0.75; transform: scale(0.98); }
+      from { opacity: 0.8; transform: scale(0.98); }
       to { opacity: 1; transform: scale(1.02); }
     }
 
     .user-pill {
-      font-size: 0.75rem;
-      font-weight: 800;
+      font-family: 'Chakra Petch', sans-serif;
+      font-size: 0.8rem;
+      font-weight: 700;
       color: #38bdf8;
-      background: #0f172a;
-      border: 1px solid #334155;
-      padding: 4px 10px;
-      border-radius: 20px;
-      letter-spacing: 0.5px;
+      background: #070c18;
+      border: 1px solid #1e293b;
+      padding: 6px 12px;
+      border-radius: 10px;
+      letter-spacing: 1px;
     }
 
     .contacts-label {
-      font-size: 0.65rem;
+      font-family: 'Chakra Petch', sans-serif;
+      font-size: 0.7rem;
       color: #64748b;
       letter-spacing: 1.5px;
       text-transform: uppercase;
-      margin-bottom: 6px;
+      margin-bottom: 8px;
       text-align: left;
-      font-weight: 800;
+      font-weight: 700;
       display: flex;
       justify-content: space-between;
+      padding: 0 4px;
     }
 
-    /* Modern Contacts Grid */
+    /* Industrial Beveled Push-Buttons */
     .contacts-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
-      gap: 6px;
-      margin-bottom: 10px;
+      gap: 8px;
+      margin-bottom: 12px;
     }
     .contact-btn {
       background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
-      color: #cbd5e1;
+      color: #94a3b8;
       border: 1px solid #334155;
-      padding: 8px 10px;
+      padding: 12px 10px;
       border-radius: 10px;
-      font-size: 0.75rem;
+      font-family: 'Chakra Petch', sans-serif;
+      font-size: 0.82rem;
       font-weight: 700;
+      letter-spacing: 0.8px;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: space-between;
+      box-shadow: 0 3px 6px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.08);
       transition: all 0.15s ease;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     }
     .contact-btn .indicator {
-      width: 7px;
-      height: 7px;
+      width: 8px;
+      height: 8px;
       border-radius: 50%;
-      background: #475569;
-      box-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
+      background: #334155;
+      box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.8);
+    }
+    .contact-btn:active {
+      transform: scale(0.98);
     }
     .contact-btn.active {
       background: linear-gradient(180deg, #0284c7 0%, #0369a1 100%);
       color: #ffffff;
       border-color: #38bdf8;
-      box-shadow: 0 0 12px rgba(56, 189, 248, 0.45);
+      box-shadow: 0 4px 14px rgba(2, 132, 199, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.2);
     }
     .contact-btn.active .indicator {
       background: #38bdf8;
-      box-shadow: 0 0 8px #38bdf8;
+      box-shadow: 0 0 10px #38bdf8;
     }
     .contact-btn.talkall {
       grid-column: span 2;
-      background: linear-gradient(180deg, #334155 0%, #1e293b 100%);
-      border-color: #475569;
-      font-weight: 800;
-      font-size: 0.8rem;
-    }
-    .contact-btn.talkall.active {
       background: linear-gradient(180deg, #2563eb 0%, #1d4ed8 100%);
       border-color: #60a5fa;
-      box-shadow: 0 0 14px rgba(37, 99, 235, 0.5);
+      color: #ffffff;
+      font-weight: 800;
+      font-size: 0.9rem;
+      padding: 13px 12px;
+      box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.25);
     }
-    .contact-btn.talkall.active .indicator {
+    .contact-btn.talkall .indicator {
       background: #93c5fd;
       box-shadow: 0 0 8px #93c5fd;
     }
@@ -193,7 +205,7 @@
     .meter-container {
       width: 100%;
       height: 8px;
-      background: #020617;
+      background: #070c18;
       border-radius: 4px;
       overflow: hidden;
       border: 1px solid #1e293b;
@@ -205,7 +217,7 @@
       transition: width 0.05s ease;
     }
 
-    /* Tactical PTT Button */
+    /* PTT Button Chassis */
     .ptt-container {
       display: flex;
       flex-direction: column;
@@ -220,8 +232,9 @@
       border: 8px solid #1e293b;
       background: radial-gradient(circle at 35% 35%, #334155 0%, #0f172a 100%);
       color: #94a3b8;
-      font-size: 1.35rem;
-      font-weight: 900;
+      font-family: 'Chakra Petch', sans-serif;
+      font-size: 1.5rem;
+      font-weight: 800;
       letter-spacing: 2px;
       display: flex;
       flex-direction: column;
@@ -233,7 +246,8 @@
       transition: all 0.1s ease;
     }
     .ptt-btn span {
-      font-size: 0.68rem;
+      font-family: 'Chakra Petch', sans-serif;
+      font-size: 0.72rem;
       font-weight: 700;
       letter-spacing: 1px;
       color: #64748b;
@@ -250,33 +264,35 @@
       color: #fee2e2;
     }
 
+    /* Power Button */
     .power-btn {
       background: linear-gradient(180deg, #10b981 0%, #059669 100%);
       color: #ffffff;
-      border: 1px solid #34d399;
-      border-radius: 10px;
-      padding: 12px;
-      font-size: 0.9rem;
+      border: 1.5px solid #34d399;
+      border-radius: 12px;
+      padding: 14px;
+      font-family: 'Chakra Petch', sans-serif;
+      font-size: 1rem;
       font-weight: 800;
-      letter-spacing: 1px;
+      letter-spacing: 1.5px;
       width: 100%;
       max-width: 380px;
       cursor: pointer;
-      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
+      box-shadow: 0 4px 16px rgba(16, 185, 129, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.25);
       transition: all 0.15s ease;
     }
     .power-btn:active { transform: scale(0.98); }
     .power-btn.off {
       background: linear-gradient(180deg, #ef4444 0%, #b91c1c 100%);
       border-color: #f87171;
-      box-shadow: 0 4px 14px rgba(239, 68, 68, 0.3);
+      box-shadow: 0 4px 16px rgba(239, 68, 68, 0.35);
     }
 
     .log-box {
       width: 100%;
       max-width: 380px;
-      height: 60px;
-      background: #020617;
+      height: 55px;
+      background: #050811;
       border: 1px solid #1e293b;
       border-radius: 8px;
       font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -303,37 +319,37 @@
     </div>
 
     <div class="contacts-label">
-      <span>Channels & Direct Call</span>
+      <span>Channels & Contacts</span>
       <span id="targetModeLabel" style="color: #38bdf8;">BROADCAST</span>
     </div>
 
     <div class="contacts-grid">
       <button class="contact-btn talkall active" data-target="talkall">
-        <span>📢 Talk All (Broadcast)</span>
+        <span>📢 TALK ALL (BROADCAST)</span>
         <span class="indicator"></span>
       </button>
       <button class="contact-btn" data-target="jim">
-        <span>California Jim</span>
+        <span>CALIFORNIA JIM</span>
         <span class="indicator"></span>
       </button>
       <button class="contact-btn" data-target="edd">
-        <span>Edd</span>
+        <span>EDD</span>
         <span class="indicator"></span>
       </button>
       <button class="contact-btn" data-target="matt">
-        <span>Minnesota Matt</span>
+        <span>MINNESOTA MATT</span>
         <span class="indicator"></span>
       </button>
       <button class="contact-btn" data-target="davey">
-        <span>Davey</span>
+        <span>DAVEY</span>
         <span class="indicator"></span>
       </button>
       <button class="contact-btn" data-target="mikey">
-        <span>Mikey</span>
+        <span>MIKEY</span>
         <span class="indicator"></span>
       </button>
       <button class="contact-btn" data-target="work">
-        <span>Work Test Phone</span>
+        <span>WORK TEST PHONE</span>
         <span class="indicator"></span>
       </button>
     </div>
@@ -383,6 +399,7 @@
     let audioContext = null;
     let micAnalyser = null;
     let meterInterval = null;
+    let pingInterval = null;
     let isPoweredOn = false;
     let isTransmitting = false;
     let wakeLock = null;
@@ -451,11 +468,11 @@
         gain.connect(ctx.destination);
         osc.type = "sine";
         osc.frequency.setValueAtTime(1800, ctx.currentTime);
-        osc.frequency.setValueAtTime(2400, ctx.currentTime + 0.05);
+        osc.frequency.setValueAtTime(2400, ctx.currentTime + 0.04);
         gain.gain.setValueAtTime(0.3, ctx.currentTime);
-        gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.10);
+        gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.08);
         osc.start();
-        osc.stop(ctx.currentTime + 0.10);
+        osc.stop(ctx.currentTime + 0.08);
       } catch (e) {}
     }
 
@@ -466,7 +483,7 @@
         powerBtn.innerText = "CONNECTING...";
         powerBtn.disabled = true;
 
-        log(`Powering up as ${myDisplayName}...`);
+        log(`Connecting ${myDisplayName}...`);
 
         try {
           await requestWakeLock();
@@ -502,44 +519,7 @@
             }
           }, 50);
 
-          const connectionClientId = `fr-${myId}-${Math.floor(1000 + Math.random() * 9000)}`;
-          mqttClient = new Paho.MQTT.Client("broker.emqx.io", 8084, connectionClientId);
-
-          mqttClient.onConnectionLost = (responseObject) => {
-            if (responseObject.errorCode !== 0) {
-              log("Link lost: " + responseObject.errorMessage);
-              statusBadge.innerText = "OFFLINE";
-              statusBadge.className = "status-badge";
-            }
-          };
-
-          mqttClient.onMessageArrived = (message) => {
-            handleIncomingRadioMessage(message);
-          };
-
-          mqttClient.connect({
-            useSSL: true,
-            timeout: 4,
-            cleanSession: true,
-            onSuccess: () => {
-              isPoweredOn = true;
-              powerBtn.innerText = "POWER OFF";
-              powerBtn.className = "power-btn off";
-              powerBtn.disabled = false;
-              statusBadge.innerText = "ONLINE";
-              statusBadge.className = "status-badge online";
-              log("Radio connected.");
-
-              mqttClient.subscribe("friendradio/channel/talkall");
-              mqttClient.subscribe(`friendradio/direct/${myId}`);
-              log(`Monitoring ALL & direct to ${myId}`);
-            },
-            onFailure: (err) => {
-              log("Connection failed: " + err.errorMessage);
-              powerBtn.innerText = "POWER ON RADIO";
-              powerBtn.disabled = false;
-            }
-          });
+          connectBroker();
 
         } catch (err) {
           alert("Microphone required: " + err.message);
@@ -547,26 +527,81 @@
           powerBtn.disabled = false;
         }
       } else {
-        if (wakeLock) {
-          wakeLock.release().catch(() => {});
-          wakeLock = null;
-        }
-        if (meterInterval) clearInterval(meterInterval);
-        if (micStream) {
-          micStream.getTracks().forEach(t => t.stop());
-          micStream = null;
-        }
-        if (mqttClient && mqttClient.isConnected()) {
-          mqttClient.disconnect();
-        }
-        isPoweredOn = false;
-        powerBtn.innerText = "POWER ON RADIO";
-        powerBtn.className = "power-btn";
-        statusBadge.innerText = "RADIO OFF";
-        statusBadge.className = "status-badge";
-        meterBar.style.width = "0%";
-        log("Radio powered down.");
+        shutdownRadio();
       }
+    }
+
+    function connectBroker() {
+      const connectionClientId = `fr-${myId}-${Math.floor(1000 + Math.random() * 9000)}`;
+      mqttClient = new Paho.MQTT.Client("broker.hivemq.com", 8884, connectionClientId);
+
+      mqttClient.onConnectionLost = (responseObject) => {
+        if (responseObject.errorCode !== 0 && isPoweredOn) {
+          log("Re-establishing link...");
+          statusBadge.innerText = "RECONNECTING";
+          statusBadge.className = "status-badge";
+          setTimeout(connectBroker, 1500);
+        }
+      };
+
+      mqttClient.onMessageArrived = (message) => {
+        handleIncomingRadioMessage(message);
+      };
+
+      mqttClient.connect({
+        useSSL: true,
+        timeout: 4,
+        keepAliveInterval: 10,
+        cleanSession: true,
+        onSuccess: () => {
+          isPoweredOn = true;
+          powerBtn.innerText = "POWER OFF";
+          powerBtn.className = "power-btn off";
+          powerBtn.disabled = false;
+          statusBadge.innerText = "ONLINE";
+          statusBadge.className = "status-badge online";
+          log("Fast link established.");
+
+          mqttClient.subscribe("friendradio/channel/talkall");
+          mqttClient.subscribe(`friendradio/direct/${myId}`);
+
+          if (pingInterval) clearInterval(pingInterval);
+          pingInterval = setInterval(() => {
+            if (mqttClient && mqttClient.isConnected()) {
+              const ping = new Paho.MQTT.Message("P");
+              ping.destinationName = "friendradio/ping";
+              mqttClient.send(ping);
+            }
+          }, 10000);
+        },
+        onFailure: (err) => {
+          log("Link failed. Retrying...");
+          setTimeout(connectBroker, 2000);
+        }
+      });
+    }
+
+    function shutdownRadio() {
+      if (wakeLock) {
+        wakeLock.release().catch(() => {});
+        wakeLock = null;
+      }
+      if (pingInterval) clearInterval(pingInterval);
+      if (meterInterval) clearInterval(meterInterval);
+      if (micStream) {
+        micStream.getTracks().forEach(t => t.stop());
+        micStream = null;
+      }
+      if (mqttClient && mqttClient.isConnected()) {
+        mqttClient.disconnect();
+      }
+      isPoweredOn = false;
+      powerBtn.innerText = "POWER ON RADIO";
+      powerBtn.className = "power-btn";
+      statusBadge.innerText = "RADIO OFF";
+      statusBadge.className = "status-badge";
+      meterBar.style.width = "0%";
+      log("Radio powered down.");
     }
 
     function startTransmit() {
@@ -586,7 +621,7 @@
         if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = "";
       }
 
-      const options = mimeType ? { mimeType, audioBitsPerSecond: 16000 } : { audioBitsPerSecond: 16000 };
+      const options = mimeType ? { mimeType, audioBitsPerSecond: 12000 } : { audioBitsPerSecond: 12000 };
       mediaRecorder = new MediaRecorder(micStream, options);
 
       mediaRecorder.ondataavailable = (e) => {
@@ -636,6 +671,7 @@
 
     function handleIncomingRadioMessage(message) {
       try {
+        if (message.destinationName === "friendradio/ping") return;
         const payload = JSON.parse(message.payloadString);
         if (payload.sender === myId) return;
 
