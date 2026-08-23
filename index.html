@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
   <title>Direct Connect Walkie-Talkie</title>
-  <!-- MQTT for Zero-Config Signaling & Mesh Audio -->
   <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
   <style>
     * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
@@ -18,10 +17,9 @@
       align-items: center;
       justify-content: space-between;
       height: 100dvh;
-      padding: 24px 16px;
+      padding: 16px;
     }
-    .header { text-align: center; }
-    .header h1 { margin: 0; font-size: 1.4rem; letter-spacing: 2px; color: #58a6ff; }
+    .header h1 { margin: 0; font-size: 1.3rem; letter-spacing: 2px; color: #58a6ff; text-align: center; }
     
     .screen {
       background-color: #161b22;
@@ -29,7 +27,7 @@
       border-radius: 12px;
       width: 100%;
       max-width: 360px;
-      padding: 16px;
+      padding: 12px 16px;
       text-align: center;
     }
     .status-badge {
@@ -37,8 +35,8 @@
       padding: 6px 14px;
       border-radius: 20px;
       font-weight: bold;
-      font-size: 0.9rem;
-      margin-bottom: 12px;
+      font-size: 0.85rem;
+      margin-bottom: 8px;
       background: #21262d;
       color: #8b949e;
     }
@@ -49,9 +47,9 @@
       background: #0d1117;
       color: #58a6ff;
       border: 1px solid #30363d;
-      padding: 8px 12px;
+      padding: 6px 10px;
       border-radius: 8px;
-      font-size: 1rem;
+      font-size: 0.95rem;
       width: 100%;
       font-weight: bold;
       outline: none;
@@ -62,16 +60,16 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      margin: 20px 0;
+      margin: 10px 0;
     }
     .ptt-btn {
-      width: 180px;
-      height: 180px;
+      width: 160px;
+      height: 160px;
       border-radius: 50%;
       border: 6px solid #30363d;
       background: radial-gradient(circle, #21262d 0%, #161b22 100%);
       color: #8b949e;
-      font-size: 1.4rem;
+      font-size: 1.3rem;
       font-weight: bold;
       display: flex;
       align-items: center;
@@ -94,14 +92,30 @@
       color: #fff;
       border: none;
       border-radius: 8px;
-      padding: 14px 24px;
-      font-size: 1rem;
+      padding: 12px;
+      font-size: 0.95rem;
       font-weight: bold;
       width: 100%;
       max-width: 360px;
       cursor: pointer;
     }
     .power-btn.off { background-color: #da3633; }
+
+    /* On-Screen Activity Log */
+    .log-box {
+      width: 100%;
+      max-width: 360px;
+      height: 65px;
+      background: #000;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 0.75rem;
+      color: #3fb950;
+      padding: 6px;
+      overflow-y: auto;
+      text-align: left;
+    }
   </style>
 </head>
 <body>
@@ -113,9 +127,9 @@
   <div class="screen">
     <div id="statusBadge" class="status-badge">RADIO OFF</div>
     <select id="channelSelect" class="channel-select">
-      <option value="walkie-room-alpha">CHANNEL 1</option>
-      <option value="walkie-room-bravo">CHANNEL 2</option>
-      <option value="walkie-room-charlie">CHANNEL 3</option>
+      <option value="room-alpha-99">CHANNEL 1</option>
+      <option value="room-bravo-99">CHANNEL 2</option>
+      <option value="room-charlie-99">CHANNEL 3</option>
     </select>
   </div>
 
@@ -124,12 +138,17 @@
   </div>
 
   <button id="powerBtn" class="power-btn">POWER ON RADIO</button>
+  
+  <div id="logBox" class="log-box">Radio standby. Click Power On.</div>
+
+  <audio id="remoteAudioPlayer" playsinline></audio>
 
   <script>
-    const myClientId = "radio-" + Math.random().toString(36).substring(2, 9);
+    const myId = "radio-" + Math.floor(Math.random() * 100000);
     let mqttClient = null;
     let localStream = null;
     let mediaRecorder = null;
+    let audioChunks = [];
     let isPoweredOn = false;
     let isTransmitting = false;
 
@@ -137,8 +156,14 @@
     const pttBtn = document.getElementById("pttButton");
     const statusBadge = document.getElementById("statusBadge");
     const channelSelect = document.getElementById("channelSelect");
+    const logBox = document.getElementById("logBox");
+    const remoteAudioPlayer = document.getElementById("remoteAudioPlayer");
 
-    // Nextel chirp generator
+    function log(msg) {
+      logBox.innerHTML = `> ${msg}<br>` + logBox.innerHTML;
+    }
+
+    // Audio synthesizer for Nextel chirp
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     function playChirp() {
       try {
@@ -160,25 +185,28 @@
     async function togglePower() {
       if (audioCtx.state === "suspended") await audioCtx.resume();
 
+      // Crucial: Unlock mobile audio playback engine on user click
+      remoteAudioPlayer.src = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA";
+      remoteAudioPlayer.play().catch(() => {});
+
       if (!isPoweredOn) {
         powerBtn.innerText = "CONNECTING...";
         powerBtn.disabled = true;
+        log("Requesting mic permission...");
 
         try {
-          // Microphone setup
-          localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+          localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          log("Mic active. Connecting server...");
 
-          // Connect to public WebSocket broker (Zero tokens required)
-          mqttClient = mqtt.connect("wss://broker.emqx.io:8084/mqtt", {
-            clientId: myClientId,
+          mqttClient = mqtt.connect("wss://broker.hivemq.com:8884/mqtt", {
+            clientId: myId,
             clean: true,
             reconnectPeriod: 2000
           });
 
           mqttClient.on("connect", () => {
-            const topic = "directconnect/radio/" + channelSelect.value;
+            const topic = "directconnect/ptt/" + channelSelect.value;
             mqttClient.subscribe(topic);
-
             isPoweredOn = true;
             powerBtn.innerText = "POWER OFF";
             powerBtn.className = "power-btn off";
@@ -186,37 +214,45 @@
             channelSelect.disabled = true;
             statusBadge.innerText = "RX STANDBY";
             statusBadge.className = "status-badge rx";
+            log("Connected to Channel 1. Ready.");
           });
 
           mqttClient.on("message", (topic, message) => {
             try {
-              const payload = JSON.parse(message.toString());
-              if (payload.sender === myClientId) return; // Don't play back own voice
+              const packet = JSON.parse(message.toString());
+              if (packet.sender === myId) return;
 
-              if (payload.type === "audio") {
+              if (packet.audio) {
+                log("Incoming audio (" + Math.round(packet.audio.length / 1024) + " KB)...");
                 statusBadge.innerText = "INCOMING RX...";
                 statusBadge.className = "status-badge rx";
 
-                const audio = new Audio("data:audio/webm;base64," + payload.data);
-                audio.play().catch(() => {});
-                
-                audio.onended = () => {
+                remoteAudioPlayer.src = "data:audio/webm;base64," + packet.audio;
+                remoteAudioPlayer.play().then(() => {
+                  log("Audio playing.");
+                }).catch(err => {
+                  log("Play error: " + err.message);
+                });
+
+                remoteAudioPlayer.onended = () => {
                   if (!isTransmitting) {
                     statusBadge.innerText = "RX STANDBY";
                     statusBadge.className = "status-badge rx";
+                    log("RX completed. Standby.");
                   }
                 };
               }
-            } catch (e) {}
+            } catch (e) {
+              log("Parse error");
+            }
           });
 
         } catch (err) {
-          alert("Microphone permission required: " + err.message);
+          alert("Mic error: " + err.message);
           powerBtn.innerText = "POWER ON RADIO";
           powerBtn.disabled = false;
         }
       } else {
-        // Power off
         if (localStream) {
           localStream.getTracks().forEach(t => t.stop());
           localStream = null;
@@ -228,6 +264,7 @@
         channelSelect.disabled = false;
         statusBadge.innerText = "RADIO OFF";
         statusBadge.className = "status-badge";
+        log("Radio powered down.");
       }
     }
 
@@ -238,27 +275,31 @@
       pttBtn.classList.add("active");
       statusBadge.innerText = "TRANSMITTING (TX)";
       statusBadge.className = "status-badge tx";
+      log("TX recording...");
 
-      let chunks = [];
-      const mime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus") ? "audio/webm;codecs=opus" : "audio/webm";
+      audioChunks = [];
+      const mime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus") 
+        ? "audio/webm;codecs=opus" 
+        : (MediaRecorder.isTypeSupported("audio/mp4") ? "audio/mp4" : "audio/webm");
+
       mediaRecorder = new MediaRecorder(localStream, { mimeType: mime });
 
       mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) chunks.push(e.data);
+        if (e.data.size > 0) audioChunks.push(e.data);
       };
 
       mediaRecorder.onstop = () => {
-        const blob = new Blob(chunks, { type: "audio/webm" });
+        const audioBlob = new Blob(audioChunks, { type: mime });
         const reader = new FileReader();
-        reader.readAsDataURL(blob);
+        reader.readAsDataURL(audioBlob);
         reader.onloadend = () => {
           const base64Audio = reader.result.split(",")[1];
-          const topic = "directconnect/radio/" + channelSelect.value;
+          const topic = "directconnect/ptt/" + channelSelect.value;
           mqttClient.publish(topic, JSON.stringify({
-            sender: myClientId,
-            type: "audio",
-            data: base64Audio
+            sender: myId,
+            audio: base64Audio
           }));
+          log("Sent " + Math.round(base64Audio.length / 1024) + " KB audio.");
         };
       };
 
@@ -279,11 +320,11 @@
 
     powerBtn.addEventListener("click", togglePower);
 
-    // Touch events (Mobile)
+    // Mobile touch events
     pttBtn.addEventListener("touchstart", (e) => { e.preventDefault(); startTransmit(); });
     pttBtn.addEventListener("touchend", (e) => { e.preventDefault(); stopTransmit(); });
 
-    // Mouse events (Laptop/PC)
+    // PC/Laptop mouse events
     pttBtn.addEventListener("mousedown", startTransmit);
     pttBtn.addEventListener("mouseup", stopTransmit);
   </script>
