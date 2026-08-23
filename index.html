@@ -60,7 +60,6 @@
       text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
     }
 
-    /* Weather Radar Quick Button */
     .radar-btn {
       position: absolute;
       right: 0;
@@ -80,7 +79,6 @@
       gap: 3px;
     }
 
-    /* Screen Glass Panel */
     .screen {
       background: rgba(8, 47, 73, 0.85);
       border: 1.5px solid rgba(56, 189, 248, 0.45);
@@ -167,7 +165,6 @@
       padding: 0 2px;
     }
 
-    /* Contact Buttons with Direct Message Action */
     .contacts-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
@@ -216,7 +213,6 @@
       box-shadow: 0 0 8px #fef08a;
     }
 
-    /* Direct Message Button per User */
     .msg-btn {
       background: rgba(0, 0, 0, 0.25);
       border: none;
@@ -265,7 +261,6 @@
       transition: width 0.05s ease;
     }
 
-    /* Giant Thumbs-Up PTT Button */
     .ptt-container {
       display: flex;
       flex-direction: column;
@@ -321,7 +316,6 @@
       color: #ffffff;
     }
 
-    /* Power Button */
     .power-btn {
       background: linear-gradient(180deg, #10b981 0%, #059669 100%);
       color: #ffffff;
@@ -362,7 +356,6 @@
       line-height: 1.35;
     }
 
-    /* Weather Radar Modal */
     .modal-overlay {
       display: none;
       position: fixed;
@@ -481,6 +474,14 @@
         <button class="msg-btn" title="Message Davey">💬</button>
       </div>
 
+      <div class="contact-card" data-target="chuckie">
+        <button class="contact-btn">
+          <span>CHUCKIE</span>
+          <span class="indicator"></span>
+        </button>
+        <button class="msg-btn" title="Message Chuckie">💬</button>
+      </div>
+
       <div class="contact-card" data-target="mikey">
         <button class="contact-btn">
           <span>MIKEY</span>
@@ -516,7 +517,6 @@
   
   <div id="logBox" class="log-box">Tap Power On to connect.</div>
 
-  <!-- Radar Modal Popup -->
   <div id="radarModal" class="modal-overlay">
     <div class="modal-card">
       <div class="modal-header">
@@ -535,6 +535,7 @@
       "edd": "Edd",
       "matt": "Minnesota Matt",
       "davey": "Davey",
+      "chuckie": "Chuckie",
       "mikey": "Mikey",
       "work": "Work Test Phone"
     };
@@ -572,14 +573,12 @@
     const meterBar = document.getElementById("meterBar");
     const contactCards = document.querySelectorAll(".contact-card");
 
-    // Radar Elements
     const radarOpenBtn = document.getElementById("radarOpenBtn");
     const radarCloseBtn = document.getElementById("radarCloseBtn");
     const radarModal = document.getElementById("radarModal");
     const radarFrame = document.getElementById("radarFrame");
 
     radarOpenBtn.addEventListener("click", () => {
-      // Live interactive St. Pete Beach radar map (RainViewer embedded layer centered on St. Pete Beach)
       radarFrame.src = "https://www.rainviewer.com/map.html?loc=27.7253,-82.7412,10&oCS=1&c=1&o=83&lm=1&layer=radar&sm=1&sn=1";
       radarModal.classList.add("open");
     });
@@ -596,7 +595,6 @@
         card.style.display = "none";
       }
 
-      // Voice PTT Channel Selection
       const selectBtn = card.querySelector(".contact-btn");
       selectBtn.addEventListener("click", () => {
         contactCards.forEach(c => c.classList.remove("active"));
@@ -615,7 +613,6 @@
         }
       });
 
-      // Direct Text Message Action
       const msgBtn = card.querySelector(".msg-btn");
       msgBtn.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -884,7 +881,6 @@
         const payload = JSON.parse(message.payloadString);
         if (payload.sender === myId) return;
 
-        // Handle Direct Text Message
         if (payload.type === "TEXT_MESSAGE") {
           playChirp();
           const sender = payload.senderName;
@@ -894,7 +890,6 @@
           return;
         }
 
-        // Handle Live Voice
         if (payload.type === "VOICE_TRANSMISSION") {
           const callType = payload.target === "talkall" ? "📢 [ALL]" : "🔒 [DIRECT]";
           statusBadge.innerText = `RX: ${payload.senderName.toUpperCase()}`;
