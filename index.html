@@ -523,6 +523,9 @@
   
   <div id="logBox" class="log-box">Tap Power On to connect.</div>
 
+  <!-- Hidden Silent Keep-Alive Audio Element -->
+  <audio id="keepAliveAudio" loop playsinline src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAP8A/w=="></audio>
+
   <div id="radarModal" class="modal-overlay">
     <div class="modal-card">
       <div class="modal-header">
@@ -550,7 +553,6 @@
     const urlParams = new URLSearchParams(window.location.search);
     const urlUser = urlParams.get("user");
     
-    // Default fallback to laptop if loaded on a generic browser without tags
     let myId = urlUser || localStorage.getItem("fr_my_id") || "laptop";
     if (urlUser) {
       localStorage.setItem("fr_my_id", myId);
@@ -580,6 +582,7 @@
     const logBox = document.getElementById("logBox");
     const meterBar = document.getElementById("meterBar");
     const contactCards = document.querySelectorAll(".contact-card");
+    const keepAliveAudio = document.getElementById("keepAliveAudio");
 
     const radarOpenBtn = document.getElementById("radarOpenBtn");
     const radarCloseBtn = document.getElementById("radarCloseBtn");
@@ -680,6 +683,16 @@
       const ctx = getAudioContext();
 
       if (!isPoweredOn) {
+        // Request background push notification permission
+        if ('Notification' in window && Notification.permission !== 'granted') {
+          Notification.requestPermission().catch(() => {});
+        }
+
+        // Start Silent In-Audible Audio Loop to prevent lock-screen sleep
+        try {
+          keepAliveAudio.play().catch(() => {});
+        } catch(e) {}
+
         powerBtn.innerText = "CONNECTING...";
         powerBtn.disabled = true;
 
@@ -786,6 +799,9 @@
         wakeLock.release().catch(() => {});
         wakeLock = null;
       }
+      try {
+        keepAliveAudio.pause();
+      } catch(e) {}
       if (pingInterval) clearInterval(pingInterval);
       if (meterInterval) clearInterval(meterInterval);
       if (micStream) {
@@ -894,7 +910,16 @@
           const sender = payload.senderName;
           const directTag = payload.target === "talkall" ? "📢 [ALL]" : "🔒 [DIRECT]";
           log(`${directTag} 💬 ${sender}: "${payload.text}"`);
-          alert(`💬 Message from ${sender}:\n\n"${payload.text}"`);
+
+          // Background Lock-Screen Notification Trigger
+          if ('Notification' in window && Notification.permission === 'granted' && document.hidden) {
+            new Notification(`💬 ${sender}`, {
+              body: payload.text,
+              icon: 'https://cdn-icons-png.flaticon.com/512/945/945418.png'
+            });
+          } else {
+            alert(`💬 Message from ${sender}:\n\n"${payload.text}"`);
+          }
           return;
         }
 
@@ -952,11 +977,9 @@
 
     powerBtn.addEventListener("click", togglePower);
 
-    // Mobile touch
     pttBtn.addEventListener("touchstart", (e) => { e.preventDefault(); startTransmit(); });
     pttBtn.addEventListener("touchend", (e) => { e.preventDefault(); stopTransmit(); });
 
-    // Desktop mouse
     pttBtn.addEventListener("mousedown", startTransmit);
     pttBtn.addEventListener("mouseup", stopTransmit);
   </script>
