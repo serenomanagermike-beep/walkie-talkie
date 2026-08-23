@@ -104,12 +104,12 @@
     .log-box {
       width: 100%;
       max-width: 360px;
-      height: 70px;
+      height: 80px;
       background: #000;
       border: 1px solid #30363d;
       border-radius: 6px;
       font-family: monospace;
-      font-size: 0.75rem;
+      font-size: 0.72rem;
       color: #3fb950;
       padding: 6px;
       overflow-y: auto;
@@ -150,6 +150,7 @@
     let isPoweredOn = false;
     let isTransmitting = false;
     let syncInterval = null;
+    let eventSource = null;
 
     const powerBtn = document.getElementById("powerBtn");
     const pttBtn = document.getElementById("pttButton");
@@ -189,14 +190,33 @@
         log("Accessing microphone...");
 
         try {
-          // 1. Get Live Mic Stream
-          localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-          // Mute mic tracks by default (Standby)
+          // 1. Get Live Mic Stream optimized for voice & mobile Chrome
+          localStream = await navigator.mediaDevices.getUserMedia({
+            audio: {
+              echoCancellation: true,
+              noiseSuppression: true,
+              autoGainControl: true
+            },
+            video: false
+          });
+
+          // Mute mic tracks by default (RX Standby)
           localStream.getAudioTracks().forEach(track => track.enabled = false);
           log("Microphone ready (Muted/RX).");
 
-          // 2. Initialize PeerJS connection
-          peer = new Peer(myId);
+          // 2. Initialize PeerJS with explicit STUN servers
+          peer = new Peer(myId, {
+            debug: 1,
+            config: {
+              iceServers: [
+                { urls: "stun:stun.l.google.com:19302" },
+                { urls: "stun:stun1.l.google.com:19302" },
+                { urls: "stun:stun2.l.google.com:19302" },
+                { urls: "stun:stun.cloudflare.com:3478" }
+              ],
+              iceCandidatePoolSize: 10
+            }
+          });
 
           peer.on("open", (id) => {
             isPoweredOn = true;
@@ -206,21 +226,26 @@
             channelSelect.disabled = true;
             statusBadge.innerText = "RX STANDBY";
             statusBadge.className = "status-badge rx";
-            log("Radio Online ID: " + id);
+            log("Online ID: " + id);
 
-            // Announce presence via signaling mesh
             joinChannelMesh();
           });
 
           // Handle incoming audio call
           peer.on("call", (call) => {
-            log("Connected to peer: " + call.peer);
+            log("Inbound call from: " + call.peer);
             call.answer(localStream);
             attachAudioStream(call);
           });
 
           peer.on("error", (err) => {
-            log("Radio error: " + err.type);
+            log("Radio ERR: " + err.type);
+            console.error("PeerJS Error:", err);
+          });
+
+          peer.on("disconnected", () => {
+            log("Signaling lost. Reconnecting...");
+            if (peer && !peer.destroyed) peer.reconnect();
           });
 
         } catch (err) {
@@ -231,6 +256,7 @@
       } else {
         // Disconnect & Reset
         if (syncInterval) clearInterval(syncInterval);
+        if (eventSource) eventSource.close();
         if (localStream) {
           localStream.getTracks().forEach(track => track.stop());
           localStream = null;
@@ -250,6 +276,7 @@
 
     function attachAudioStream(call) {
       activeCalls[call.peer] = call;
+
       call.on("stream", (remoteStream) => {
         let audio = document.getElementById("audio-" + call.peer);
         if (!audio) {
@@ -260,14 +287,30 @@
           audioContainer.appendChild(audio);
         }
         audio.srcObject = remoteStream;
-        audio.play().catch(() => {});
-        log("Audio pipeline active for " + call.peer);
+        audio.play().catch(e => {
+          log("Tap screen to enable audio output");
+        });
+        log("Audio pipeline active: " + call.peer);
       });
+
+      // Monitor connection health
+      if (call.peerConnection) {
+        call.peerConnection.oniceconnectionstatechange = () => {
+          const state = call.peerConnection.iceConnectionState;
+          if (state === "failed" || state === "disconnected") {
+            log("Link " + state + " with " + call.peer);
+          }
+        };
+      }
 
       call.on("close", () => {
         const el = document.getElementById("audio-" + call.peer);
         if (el) el.remove();
         delete activeCalls[call.peer];
+      });
+
+      call.on("error", (err) => {
+        log("Call err with " + call.peer);
       });
     }
 
@@ -283,13 +326,17 @@
       }).catch(() => {});
 
       // Listen for other radios joining
-      const eventSource = new EventSource(`${syncUrl}/sse`);
+      if (eventSource) eventSource.close();
+      eventSource = new EventSource(`${syncUrl}/sse`);
+      
       eventSource.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
           const message = JSON.parse(data.message);
-          if (message.id && message.id !== myId) {
-            if (message.action === "join" && !activeCalls[message.id]) {
+          
+          if (message.id && message.id !== myId && message.action === "join") {
+            // Glare prevention: Only the peer with the lexicographically higher ID initiates the call
+            if (!activeCalls[message.id] && myId > message.id) {
               log("Calling peer: " + message.id);
               const call = peer.call(message.id, localStream);
               if (call) attachAudioStream(call);
