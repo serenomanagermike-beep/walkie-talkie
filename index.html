@@ -32,7 +32,7 @@
       align-items: center;
       justify-content: space-between;
       height: 100dvh;
-      padding: 12px 16px;
+      padding: 10px 14px;
       overflow: hidden;
     }
 
@@ -40,11 +40,11 @@
       width: 100%;
       max-width: 380px;
       text-align: center;
-      padding-top: 2px;
+      position: relative;
     }
     .header h1 {
       font-family: 'Chakra Petch', sans-serif;
-      font-size: 1.55rem;
+      font-size: 1.45rem;
       letter-spacing: 4px;
       font-weight: 800;
       color: #ffffff;
@@ -52,13 +52,32 @@
     }
     .header .tagline {
       font-family: 'Chakra Petch', sans-serif;
-      font-size: 0.7rem;
+      font-size: 0.68rem;
       color: #fef08a;
-      letter-spacing: 2.5px;
+      letter-spacing: 2px;
       text-transform: uppercase;
       font-weight: 700;
-      margin-top: 2px;
       text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
+    }
+
+    /* Weather Radar Quick Button */
+    .radar-btn {
+      position: absolute;
+      right: 0;
+      top: 0;
+      background: linear-gradient(180deg, #0284c7 0%, #0369a1 100%);
+      color: #ffffff;
+      border: 1px solid #38bdf8;
+      border-radius: 8px;
+      padding: 4px 8px;
+      font-family: 'Chakra Petch', sans-serif;
+      font-size: 0.65rem;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+      display: flex;
+      align-items: center;
+      gap: 3px;
     }
 
     /* Screen Glass Panel */
@@ -68,10 +87,10 @@
       box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.5), 0 10px 30px rgba(0, 0, 0, 0.6);
       backdrop-filter: blur(14px);
       -webkit-backdrop-filter: blur(14px);
-      border-radius: 18px;
+      border-radius: 16px;
       width: 100%;
       max-width: 380px;
-      padding: 12px;
+      padding: 10px;
       text-align: center;
     }
 
@@ -79,19 +98,18 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 10px;
-      padding: 0 2px;
+      margin-bottom: 8px;
     }
 
     .status-badge {
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      padding: 5px 12px;
-      border-radius: 10px;
+      padding: 4px 10px;
+      border-radius: 8px;
       font-family: 'Chakra Petch', sans-serif;
       font-weight: 700;
-      font-size: 0.75rem;
+      font-size: 0.72rem;
       letter-spacing: 1px;
       background: rgba(15, 23, 42, 0.7);
       color: #94a3b8;
@@ -125,20 +143,19 @@
 
     .user-pill {
       font-family: 'Chakra Petch', sans-serif;
-      font-size: 0.78rem;
+      font-size: 0.75rem;
       font-weight: 700;
       color: #fef08a;
       background: rgba(15, 23, 42, 0.75);
       border: 1px solid rgba(254, 240, 138, 0.4);
-      padding: 5px 10px;
-      border-radius: 10px;
+      padding: 4px 8px;
+      border-radius: 8px;
       letter-spacing: 1px;
-      text-shadow: 0 1px 4px rgba(0,0,0,0.6);
     }
 
     .contacts-label {
       font-family: 'Chakra Petch', sans-serif;
-      font-size: 0.68rem;
+      font-size: 0.65rem;
       color: #bae6fd;
       letter-spacing: 1.5px;
       text-transform: uppercase;
@@ -147,71 +164,95 @@
       font-weight: 700;
       display: flex;
       justify-content: space-between;
-      padding: 0 4px;
-      text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+      padding: 0 2px;
     }
 
-    /* Beachy / Oceanic Tabs */
+    /* Contact Buttons with Direct Message Action */
     .contacts-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
       gap: 6px;
-      margin-bottom: 10px;
+      margin-bottom: 8px;
+    }
+    .contact-card {
+      display: flex;
+      background: linear-gradient(180deg, rgba(14, 116, 144, 0.85) 0%, rgba(21, 94, 117, 0.95) 100%);
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.35);
     }
     .contact-btn {
-      background: linear-gradient(180deg, rgba(14, 116, 144, 0.85) 0%, rgba(21, 94, 117, 0.95) 100%);
+      flex: 1;
+      background: transparent;
+      border: none;
       color: #e0f2fe;
-      border: 1px solid rgba(56, 189, 248, 0.4);
-      padding: 10px 8px;
-      border-radius: 10px;
+      padding: 8px 6px;
       font-family: 'Chakra Petch', sans-serif;
-      font-size: 0.78rem;
+      font-size: 0.74rem;
       font-weight: 700;
-      letter-spacing: 0.6px;
+      letter-spacing: 0.5px;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      box-shadow: 0 3px 6px rgba(0, 0, 0, 0.35);
-      transition: all 0.15s ease;
     }
     .contact-btn .indicator {
-      width: 8px;
-      height: 8px;
+      width: 7px;
+      height: 7px;
       border-radius: 50%;
       background: rgba(255, 255, 255, 0.3);
     }
-    .contact-btn:active {
-      transform: scale(0.98);
-    }
-    .contact-btn.active {
+    .contact-card.active {
       background: linear-gradient(180deg, #0ea5e9 0%, #0284c7 100%);
-      color: #ffffff;
       border-color: #7dd3fc;
-      box-shadow: 0 0 14px rgba(56, 189, 248, 0.6);
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.6);
     }
-    .contact-btn.active .indicator {
+    .contact-card.active .contact-btn {
+      color: #ffffff;
+    }
+    .contact-card.active .indicator {
       background: #fef08a;
       box-shadow: 0 0 8px #fef08a;
     }
-    .contact-btn.talkall {
+
+    /* Direct Message Button per User */
+    .msg-btn {
+      background: rgba(0, 0, 0, 0.25);
+      border: none;
+      border-left: 1px solid rgba(255, 255, 255, 0.15);
+      color: #fef08a;
+      padding: 0 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.85rem;
+      transition: background 0.1s ease;
+    }
+    .msg-btn:active {
+      background: rgba(254, 240, 138, 0.3);
+    }
+
+    .contact-card.talkall {
       grid-column: span 2;
       background: linear-gradient(180deg, #0284c7 0%, #0369a1 100%);
       border-color: #38bdf8;
+    }
+    .contact-card.talkall .contact-btn {
       color: #ffffff;
       font-weight: 800;
-      font-size: 0.85rem;
-      padding: 11px 12px;
-      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.5);
+      font-size: 0.82rem;
+      padding: 9px 10px;
     }
-    .contact-btn.talkall .indicator {
+    .contact-card.talkall .indicator {
       background: #fef08a;
       box-shadow: 0 0 8px #fef08a;
     }
 
     .meter-container {
       width: 100%;
-      height: 7px;
+      height: 6px;
       background: rgba(15, 23, 42, 0.85);
       border-radius: 4px;
       overflow: hidden;
@@ -230,11 +271,11 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      margin: 4px 0;
+      margin: 2px 0;
     }
     .ptt-btn {
-      width: 165px;
-      height: 165px;
+      width: 155px;
+      height: 155px;
       border-radius: 50%;
       border: 6px solid #38bdf8;
       background: radial-gradient(circle at 35% 35%, #0ea5e9 0%, #0369a1 100%);
@@ -249,8 +290,8 @@
       position: relative;
     }
     .ptt-btn svg {
-      width: 82px;
-      height: 82px;
+      width: 76px;
+      height: 76px;
       fill: #ffffff;
       filter: drop-shadow(0 4px 8px rgba(0,0,0,0.5));
       transition: transform 0.1s ease;
@@ -258,7 +299,7 @@
     }
     .ptt-btn span {
       font-family: 'Chakra Petch', sans-serif;
-      font-size: 0.72rem;
+      font-size: 0.7rem;
       font-weight: 800;
       letter-spacing: 1px;
       color: #fef08a;
@@ -285,10 +326,10 @@
       background: linear-gradient(180deg, #10b981 0%, #059669 100%);
       color: #ffffff;
       border: 1.5px solid #34d399;
-      border-radius: 12px;
-      padding: 13px;
+      border-radius: 10px;
+      padding: 12px;
       font-family: 'Chakra Petch', sans-serif;
-      font-size: 0.95rem;
+      font-size: 0.9rem;
       font-weight: 800;
       letter-spacing: 1.5px;
       width: 100%;
@@ -307,18 +348,76 @@
     .log-box {
       width: 100%;
       max-width: 380px;
-      height: 50px;
+      height: 48px;
       background: rgba(8, 47, 73, 0.88);
       border: 1px solid rgba(56, 189, 248, 0.35);
       backdrop-filter: blur(10px);
       border-radius: 8px;
       font-family: ui-monospace, monospace;
-      font-size: 0.68rem;
+      font-size: 0.65rem;
       color: #7dd3fc;
-      padding: 6px 8px;
+      padding: 5px 8px;
       overflow-y: auto;
       text-align: left;
       line-height: 1.35;
+    }
+
+    /* Weather Radar Modal */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(6px);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 14px;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-card {
+      background: #082f49;
+      border: 2px solid #38bdf8;
+      border-radius: 16px;
+      width: 100%;
+      max-width: 380px;
+      overflow: hidden;
+      box-shadow: 0 0 30px rgba(56, 189, 248, 0.4);
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 14px;
+      background: #0c4a6e;
+      border-bottom: 1px solid #38bdf8;
+    }
+    .modal-header h3 {
+      font-family: 'Chakra Petch', sans-serif;
+      font-size: 0.9rem;
+      color: #fef08a;
+      letter-spacing: 1px;
+    }
+    .close-modal-btn {
+      background: #ef4444;
+      color: #ffffff;
+      border: none;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-family: 'Chakra Petch', sans-serif;
+      font-weight: 800;
+      font-size: 0.75rem;
+      cursor: pointer;
+    }
+    .modal-body {
+      width: 100%;
+      height: 380px;
+      background: #000000;
+    }
+    .modal-body iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
     }
   </style>
 </head>
@@ -327,6 +426,7 @@
   <div class="header">
     <h1>FRIEND RADIO</h1>
     <div class="tagline">Direct Connect PTT</div>
+    <button id="radarOpenBtn" class="radar-btn">📡 RADAR</button>
   </div>
 
   <div class="screen">
@@ -336,39 +436,66 @@
     </div>
 
     <div class="contacts-label">
-      <span>Channels & Contacts</span>
+      <span>Channels & Direct Call</span>
       <span id="targetModeLabel" style="color: #fef08a;">BROADCAST</span>
     </div>
 
     <div class="contacts-grid">
-      <button class="contact-btn talkall active" data-target="talkall">
-        <span>📢 TALK ALL (BROADCAST)</span>
-        <span class="indicator"></span>
-      </button>
-      <button class="contact-btn" data-target="jim">
-        <span>CALIFORNIA JIM</span>
-        <span class="indicator"></span>
-      </button>
-      <button class="contact-btn" data-target="edd">
-        <span>EDD</span>
-        <span class="indicator"></span>
-      </button>
-      <button class="contact-btn" data-target="matt">
-        <span>MINNESOTA MATT</span>
-        <span class="indicator"></span>
-      </button>
-      <button class="contact-btn" data-target="davey">
-        <span>DAVEY</span>
-        <span class="indicator"></span>
-      </button>
-      <button class="contact-btn" data-target="mikey">
-        <span>MIKEY</span>
-        <span class="indicator"></span>
-      </button>
-      <button class="contact-btn" data-target="work">
-        <span>WORK TEST PHONE</span>
-        <span class="indicator"></span>
-      </button>
+      <div class="contact-card talkall active" data-target="talkall">
+        <button class="contact-btn">
+          <span>📢 TALK ALL (BROADCAST)</span>
+          <span class="indicator"></span>
+        </button>
+        <button class="msg-btn" title="Broadcast Text">💬</button>
+      </div>
+
+      <div class="contact-card" data-target="jim">
+        <button class="contact-btn">
+          <span>CALIFORNIA JIM</span>
+          <span class="indicator"></span>
+        </button>
+        <button class="msg-btn" title="Message Jim">💬</button>
+      </div>
+
+      <div class="contact-card" data-target="edd">
+        <button class="contact-btn">
+          <span>EDD</span>
+          <span class="indicator"></span>
+        </button>
+        <button class="msg-btn" title="Message Edd">💬</button>
+      </div>
+
+      <div class="contact-card" data-target="matt">
+        <button class="contact-btn">
+          <span>MINNESOTA MATT</span>
+          <span class="indicator"></span>
+        </button>
+        <button class="msg-btn" title="Message Matt">💬</button>
+      </div>
+
+      <div class="contact-card" data-target="davey">
+        <button class="contact-btn">
+          <span>DAVEY</span>
+          <span class="indicator"></span>
+        </button>
+        <button class="msg-btn" title="Message Davey">💬</button>
+      </div>
+
+      <div class="contact-card" data-target="mikey">
+        <button class="contact-btn">
+          <span>MIKEY</span>
+          <span class="indicator"></span>
+        </button>
+        <button class="msg-btn" title="Message Mikey">💬</button>
+      </div>
+
+      <div class="contact-card" data-target="work">
+        <button class="contact-btn">
+          <span>WORK TEST PHONE</span>
+          <span class="indicator"></span>
+        </button>
+        <button class="msg-btn" title="Message Work Phone">💬</button>
+      </div>
     </div>
 
     <div class="meter-container">
@@ -388,6 +515,19 @@
   <button id="powerBtn" class="power-btn">POWER ON RADIO</button>
   
   <div id="logBox" class="log-box">Tap Power On to connect.</div>
+
+  <!-- Radar Modal Popup -->
+  <div id="radarModal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>ST. PETE BEACH LIVE RADAR</h3>
+        <button id="radarCloseBtn" class="close-modal-btn">CLOSE</button>
+      </div>
+      <div class="modal-body">
+        <iframe id="radarFrame" src="" allowfullscreen></iframe>
+      </div>
+    </div>
+  </div>
 
   <script>
     const userMap = {
@@ -430,17 +570,38 @@
     const targetModeLabel = document.getElementById("targetModeLabel");
     const logBox = document.getElementById("logBox");
     const meterBar = document.getElementById("meterBar");
-    const contactBtns = document.querySelectorAll(".contact-btn");
+    const contactCards = document.querySelectorAll(".contact-card");
 
-    contactBtns.forEach(btn => {
-      if (btn.getAttribute("data-target") === myId) {
-        btn.style.display = "none";
+    // Radar Elements
+    const radarOpenBtn = document.getElementById("radarOpenBtn");
+    const radarCloseBtn = document.getElementById("radarCloseBtn");
+    const radarModal = document.getElementById("radarModal");
+    const radarFrame = document.getElementById("radarFrame");
+
+    radarOpenBtn.addEventListener("click", () => {
+      // Live interactive St. Pete Beach radar map (RainViewer embedded layer centered on St. Pete Beach)
+      radarFrame.src = "https://www.rainviewer.com/map.html?loc=27.7253,-82.7412,10&oCS=1&c=1&o=83&lm=1&layer=radar&sm=1&sn=1";
+      radarModal.classList.add("open");
+    });
+
+    radarCloseBtn.addEventListener("click", () => {
+      radarModal.classList.remove("open");
+      radarFrame.src = "";
+    });
+
+    contactCards.forEach(card => {
+      const target = card.getAttribute("data-target");
+
+      if (target === myId) {
+        card.style.display = "none";
       }
 
-      btn.addEventListener("click", () => {
-        contactBtns.forEach(b => b.classList.remove("active"));
-        btn.classList.add("active");
-        selectedTarget = btn.getAttribute("data-target");
+      // Voice PTT Channel Selection
+      const selectBtn = card.querySelector(".contact-btn");
+      selectBtn.addEventListener("click", () => {
+        contactCards.forEach(c => c.classList.remove("active"));
+        card.classList.add("active");
+        selectedTarget = target;
 
         if (selectedTarget === "talkall") {
           pttTargetLabel.innerText = "TALK ALL";
@@ -451,6 +612,21 @@
           pttTargetLabel.innerText = contactName.toUpperCase();
           targetModeLabel.innerText = "DIRECT";
           log(`Target: Direct -> ${contactName}`);
+        }
+      });
+
+      // Direct Text Message Action
+      const msgBtn = card.querySelector(".msg-btn");
+      msgBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (!isPoweredOn) {
+          alert("Power on the radio first to send direct messages.");
+          return;
+        }
+        const contactName = target === "talkall" ? "Broadcast (All)" : (userMap[target] || target);
+        const msg = prompt(`Send direct message to ${contactName}:`);
+        if (msg && msg.trim() !== "") {
+          sendDirectTextMessage(target, msg.trim());
         }
       });
     });
@@ -552,8 +728,6 @@
 
     function connectBroker() {
       const connectionClientId = `fr-${myId}-${Math.floor(1000 + Math.random() * 9000)}`;
-      
-      // High-speed US HiveMQ Gateway cluster with keepalive
       mqttClient = new Paho.MQTT.Client("broker.hivemq.com", 8884, connectionClientId);
 
       mqttClient.onConnectionLost = (responseObject) => {
@@ -586,7 +760,6 @@
           mqttClient.subscribe("friendradio/channel/talkall");
           mqttClient.subscribe(`friendradio/direct/${myId}`);
 
-          // Active background ping keep-alive
           if (pingInterval) clearInterval(pingInterval);
           pingInterval = setInterval(() => {
             if (mqttClient && mqttClient.isConnected()) {
@@ -626,6 +799,20 @@
       log("Radio powered down.");
     }
 
+    function sendDirectTextMessage(target, text) {
+      const topic = target === "talkall" ? "friendradio/channel/talkall" : `friendradio/direct/${target}`;
+      const msgPayload = new Paho.MQTT.Message(JSON.stringify({
+        type: "TEXT_MESSAGE",
+        sender: myId,
+        senderName: myDisplayName,
+        target: target,
+        text: text
+      }));
+      msgPayload.destinationName = topic;
+      mqttClient.send(msgPayload);
+      log(`💬 Sent to ${target === 'talkall' ? 'ALL' : userMap[target]}: "${text}"`);
+    }
+
     function startTransmit() {
       if (!isPoweredOn || isTransmitting || !micStream) return;
       isTransmitting = true;
@@ -643,7 +830,6 @@
         if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = "";
       }
 
-      // Ultra-lightweight 12 kbps Opus stream for minimal latency
       const options = mimeType ? { mimeType, audioBitsPerSecond: 12000 } : { audioBitsPerSecond: 12000 };
       mediaRecorder = new MediaRecorder(micStream, options);
 
@@ -698,11 +884,22 @@
         const payload = JSON.parse(message.payloadString);
         if (payload.sender === myId) return;
 
+        // Handle Direct Text Message
+        if (payload.type === "TEXT_MESSAGE") {
+          playChirp();
+          const sender = payload.senderName;
+          const directTag = payload.target === "talkall" ? "📢 [ALL]" : "🔒 [DIRECT]";
+          log(`${directTag} 💬 ${sender}: "${payload.text}"`);
+          alert(`💬 Message from ${sender}:\n\n"${payload.text}"`);
+          return;
+        }
+
+        // Handle Live Voice
         if (payload.type === "VOICE_TRANSMISSION") {
           const callType = payload.target === "talkall" ? "📢 [ALL]" : "🔒 [DIRECT]";
           statusBadge.innerText = `RX: ${payload.senderName.toUpperCase()}`;
           statusBadge.className = "status-badge rx";
-          log(`${callType} from ${payload.senderName}`);
+          log(`${callType} voice from ${payload.senderName}`);
           
           playChirp();
           playVoicePayload(payload.data);
