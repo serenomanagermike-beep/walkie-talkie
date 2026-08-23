@@ -224,7 +224,6 @@
       align-items: center;
       justify-content: center;
       font-size: 0.85rem;
-      transition: background 0.1s ease;
     }
     .msg-btn:active {
       background: rgba(254, 240, 138, 0.3);
@@ -289,7 +288,6 @@
       height: 76px;
       fill: #ffffff;
       filter: drop-shadow(0 4px 8px rgba(0,0,0,0.5));
-      transition: transform 0.1s ease;
       pointer-events: none;
     }
     .ptt-btn span {
@@ -543,6 +541,7 @@
     const urlParams = new URLSearchParams(window.location.search);
     const urlUser = urlParams.get("user");
     
+    // Laptop / URL Identity lock
     let myId = urlUser || localStorage.getItem("fr_my_id") || "work";
     if (urlUser) {
       localStorage.setItem("fr_my_id", myId);
@@ -944,9 +943,11 @@
 
     powerBtn.addEventListener("click", togglePower);
 
+    // Mobile touch
     pttBtn.addEventListener("touchstart", (e) => { e.preventDefault(); startTransmit(); });
     pttBtn.addEventListener("touchend", (e) => { e.preventDefault(); stopTransmit(); });
 
+    // Desktop mouse
     pttBtn.addEventListener("mousedown", startTransmit);
     pttBtn.addEventListener("mouseup", stopTransmit);
   </script>
