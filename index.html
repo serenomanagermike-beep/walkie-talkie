@@ -58,11 +58,12 @@
 
     .meter-container {
       width: 100%;
-      height: 10px;
+      height: 12px;
       background: #0d1117;
-      border-radius: 5px;
+      border-radius: 6px;
       overflow: hidden;
       border: 1px solid #30363d;
+      margin-top: 4px;
     }
     .meter-bar {
       width: 0%;
@@ -159,7 +160,6 @@
   
   <div id="logBox" class="log-box">System ready. Tap Power On.</div>
 
-  <!-- Hardcoded static audio receiver element -->
   <audio id="remoteAudioPlayer" autoplay playsinline></audio>
 
   <script>
@@ -171,9 +171,10 @@
     let isTransmitting = false;
     let syncInterval = null;
     let eventSource = null;
+    
     let audioCtx = null;
-    let micAnalyser = null;
-    let animFrame = null;
+    let analyser = null;
+    let animId = null;
 
     const powerBtn = document.getElementById("powerBtn");
     const pttBtn = document.getElementById("pttButton");
@@ -187,18 +188,19 @@
       logBox.innerHTML = `> ${msg}<br>` + logBox.innerHTML;
     }
 
-    function initAudioContext() {
+    async function ensureAudioContext() {
       if (!audioCtx) {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        audioCtx = new AudioContextClass();
       }
       if (audioCtx.state === "suspended") {
-        audioCtx.resume();
+        await audioCtx.resume();
       }
     }
 
     function playChirp() {
       try {
-        initAudioContext();
+        if (!audioCtx) return;
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         osc.connect(gain);
@@ -213,60 +215,62 @@
       } catch (e) {}
     }
 
-    function setupMicMonitor(stream) {
-      try {
-        initAudioContext();
-        const source = audioCtx.createMediaStreamSource(stream);
-        micAnalyser = audioCtx.createAnalyser();
-        micAnalyser.fftSize = 64;
-        source.connect(micAnalyser);
+    function startLiveAudioMeter(stream) {
+      const source = audioCtx.createMediaStreamSource(stream);
+      analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 256;
+      source.connect(analyser);
 
-        const dataArray = new Uint8Array(micAnalyser.frequencyBinCount);
-        function checkVolume() {
-          if (!isPoweredOn) return;
-          micAnalyser.getByteFrequencyData(dataArray);
-          let sum = 0;
-          for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
-          let avg = sum / dataArray.length;
-          
-          if (isTransmitting) {
-            meterBar.style.width = Math.min(100, avg * 2.5) + "%";
-            meterBar.style.backgroundColor = "#da3633";
-          } else {
-            meterBar.style.width = "0%";
-          }
-          animFrame = requestAnimationFrame(checkVolume);
+      const bufferLength = analyser.frequencyBinCount;
+      const dataArray = new Uint8Array(bufferLength);
+
+      function updateMeter() {
+        if (!isPoweredOn) return;
+        analyser.getByteFrequencyData(dataArray);
+
+        let sum = 0;
+        for (let i = 0; i < bufferLength; i++) {
+          sum += dataArray[i];
         }
-        checkVolume();
-      } catch (e) {}
+        const average = sum / bufferLength;
+        const percentage = Math.min(100, Math.round((average / 128) * 100));
+
+        if (isTransmitting) {
+          meterBar.style.width = percentage + "%";
+          meterBar.style.backgroundColor = "#da3633";
+        } else {
+          // In RX mode show small green ambient tick
+          meterBar.style.width = Math.min(20, percentage / 2) + "%";
+          meterBar.style.backgroundColor = "#238636";
+        }
+
+        animId = requestAnimationFrame(updateMeter);
+      }
+      updateMeter();
     }
 
     async function togglePower() {
-      initAudioContext();
+      await ensureAudioContext();
       remoteAudioPlayer.play().catch(() => {});
 
       if (!isPoweredOn) {
         powerBtn.innerText = "CONNECTING...";
         powerBtn.disabled = true;
-        log("Acquiring microphone...");
+        log("Requesting mic access...");
 
         try {
+          // Standard audio capture - keep track enabled
           localStream = await navigator.mediaDevices.getUserMedia({
             audio: {
               echoCancellation: true,
-              noiseSuppression: true,
+              noiseSuppression: false,
               autoGainControl: true
             },
             video: false
           });
 
-          // Always start track in unmuted state so WebRTC transport handshake completes
-          localStream.getAudioTracks().forEach(t => t.enabled = true);
-          setupMicMonitor(localStream);
-          
-          // Now mute for RX standby
-          localStream.getAudioTracks().forEach(t => t.enabled = false);
-          log("Mic armed (RX Standby).");
+          log("Mic granted. Initializing meter...");
+          startLiveAudioMeter(localStream);
 
           peer = new Peer(myId, {
             debug: 1,
@@ -294,24 +298,24 @@
           });
 
           peer.on("call", (call) => {
-            log("Inbound connection from: " + call.peer);
+            log("Incoming call: " + call.peer);
             call.answer(localStream);
             attachStream(call);
           });
 
           peer.on("error", (err) => {
-            log("Radio error: " + err.type);
+            log("Peer error: " + err.type);
           });
 
         } catch (err) {
-          alert("Microphone required: " + err.message);
+          alert("Microphone error: " + err.message);
           powerBtn.innerText = "POWER ON RADIO";
           powerBtn.disabled = false;
         }
       } else {
         if (syncInterval) clearInterval(syncInterval);
         if (eventSource) eventSource.close();
-        if (animFrame) cancelAnimationFrame(animFrame);
+        if (animId) cancelAnimationFrame(animId);
         if (localStream) {
           localStream.getTracks().forEach(t => t.stop());
           localStream = null;
@@ -334,16 +338,16 @@
       activeCall = call;
 
       call.on("stream", (remoteStream) => {
-        log("Streaming audio link active.");
+        log("Audio stream attached!");
         remoteAudioPlayer.srcObject = remoteStream;
         remoteAudioPlayer.volume = 1.0;
         remoteAudioPlayer.play().catch(e => {
-          log("Tap anywhere to unblock audio");
+          log("Tap screen to unmute playback");
         });
       });
 
       call.on("close", () => {
-        log("Call ended.");
+        log("Connection closed.");
         remoteAudioPlayer.srcObject = null;
         activeCall = null;
       });
@@ -385,31 +389,26 @@
       }, 8000);
     }
 
-    function startTransmit() {
-      if (!isPoweredOn || isTransmitting || !localStream) return;
+    async function startTransmit() {
+      if (!isPoweredOn || isTransmitting) return;
       isTransmitting = true;
-      initAudioContext();
+      await ensureAudioContext();
       playChirp();
       
       pttBtn.classList.add("active");
       statusBadge.innerText = "TRANSMITTING (TX)";
       statusBadge.className = "status-badge tx";
-
-      localStream.getAudioTracks().forEach(t => t.enabled = true);
-      log("TX Live (Mic ON)");
+      log("TX Live - Speak Now");
     }
 
     function stopTransmit() {
-      if (!isTransmitting || !localStream) return;
+      if (!isTransmitting) return;
       isTransmitting = false;
       
       pttBtn.classList.remove("active");
       statusBadge.innerText = "RX STANDBY";
       statusBadge.className = "status-badge rx";
-
-      localStream.getAudioTracks().forEach(t => t.enabled = false);
-      meterBar.style.width = "0%";
-      log("RX Standby (Mic OFF)");
+      log("RX Standby");
     }
 
     powerBtn.addEventListener("click", togglePower);
