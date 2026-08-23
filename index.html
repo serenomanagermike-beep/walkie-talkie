@@ -44,17 +44,22 @@
     .status-badge.rx { background: #238636; color: #fff; }
     .status-badge.standby { background: #1f6feb; color: #fff; }
 
-    .channel-select {
+    .control-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .channel-select, .unit-select {
       background: #0d1117;
       color: #58a6ff;
       border: 1px solid #30363d;
-      padding: 8px 12px;
+      padding: 8px 10px;
       border-radius: 8px;
-      font-size: 0.95rem;
+      font-size: 0.85rem;
       width: 100%;
       font-weight: bold;
       outline: none;
-      margin-bottom: 8px;
     }
 
     .meter-container {
@@ -142,11 +147,17 @@
 
   <div class="screen">
     <div id="statusBadge" class="status-badge">RADIO OFF</div>
-    <select id="channelSelect" class="channel-select">
-      <option value="ch1-alpha">CHANNEL 1</option>
-      <option value="ch2-bravo">CHANNEL 2</option>
-      <option value="ch3-charlie">CHANNEL 3</option>
-    </select>
+    <div class="control-row">
+      <select id="channelSelect" class="channel-select">
+        <option value="ch1">CHANNEL 1</option>
+        <option value="ch2">CHANNEL 2</option>
+        <option value="ch3">CHANNEL 3</option>
+      </select>
+      <select id="unitSelect" class="unit-select">
+        <option value="unit1">UNIT 1 (Base/PC)</option>
+        <option value="unit2">UNIT 2 (Mobile)</option>
+      </select>
+    </div>
     <div class="meter-container">
       <div id="meterBar" class="meter-bar"></div>
     </div>
@@ -158,28 +169,21 @@
 
   <button id="powerBtn" class="power-btn">POWER ON RADIO</button>
   
-  <div id="logBox" class="log-box">System ready. Tap Power On.</div>
+  <div id="logBox" class="log-box">System ready. Select Unit & Power On.</div>
 
-  <!-- Permanent Audio Sink -->
   <audio id="speakerOutput" autoplay playsinline></audio>
 
   <script>
-    // Unique peer identity per session
-    const sessionId = Math.floor(100000 + Math.random() * 900000);
-    const myPeerId = "dc-radio-" + sessionId;
-    
     let peer = null;
     let micStream = null;
     let audioContext = null;
     let micAnalyser = null;
     let meterInterval = null;
-    let syncTimer = null;
-    let eventSource = null;
+    let reconnectInterval = null;
     let isPoweredOn = false;
     let isTransmitting = false;
 
-    // Track active connection
-    let connectedPeerId = null;
+    let targetPeerId = null;
     let activeMediaCall = null;
     let activeDataConn = null;
 
@@ -187,15 +191,20 @@
     const pttBtn = document.getElementById("pttButton");
     const statusBadge = document.getElementById("statusBadge");
     const channelSelect = document.getElementById("channelSelect");
+    const unitSelect = document.getElementById("unitSelect");
     const logBox = document.getElementById("logBox");
     const meterBar = document.getElementById("meterBar");
     const speakerOutput = document.getElementById("speakerOutput");
+
+    // Auto-select Unit 2 if on mobile screen
+    if (/Android|iPhone|iPad/i.test(navigator.userAgent)) {
+      unitSelect.value = "unit2";
+    }
 
     function log(msg) {
       logBox.innerHTML = `> ${msg}<br>` + logBox.innerHTML;
     }
 
-    // Audio Context Initializer & Nextel Chirp
     function getAudioContext() {
       if (!audioContext) {
         const AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -226,21 +235,25 @@
 
     async function togglePower() {
       const ctx = getAudioContext();
-
-      // Unlock mobile audio element immediately on user touch
       speakerOutput.muted = true;
       speakerOutput.play().catch(() => {});
 
       if (!isPoweredOn) {
-        powerBtn.innerText = "STARTING RADIO...";
+        powerBtn.innerText = "CONNECTING...";
         powerBtn.disabled = true;
-        log("Accessing microphone hardware...");
+
+        const channel = channelSelect.value;
+        const myUnit = unitSelect.value;
+        const otherUnit = myUnit === "unit1" ? "unit2" : "unit1";
+
+        const myPeerId = `dc-radio-${channel}-${myUnit}`;
+        targetPeerId = `dc-radio-${channel}-${otherUnit}`;
+
+        log(`Starting as ${myUnit.toUpperCase()} on ${channel.toUpperCase()}`);
 
         try {
-          // 1. Raw unconstrained microphone access
           micStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
           
-          // 2. Setup Mic VU Meter
           const source = ctx.createMediaStreamSource(micStream);
           micAnalyser = ctx.createAnalyser();
           micAnalyser.fftSize = 64;
@@ -263,9 +276,6 @@
             }
           }, 50);
 
-          log("Microphone online. Initializing mesh...");
-
-          // 3. Setup PeerJS
           peer = new Peer(myPeerId, {
             debug: 1,
             config: {
@@ -284,41 +294,54 @@
             powerBtn.className = "power-btn off";
             powerBtn.disabled = false;
             channelSelect.disabled = true;
+            unitSelect.disabled = true;
             statusBadge.innerText = "STANDBY";
             statusBadge.className = "status-badge standby";
-            log("Radio Online: " + id);
+            log("Online: " + id);
 
-            startSignalingMesh();
+            // Unit 1 calls Unit 2; Unit 2 waits to answer
+            if (myUnit === "unit1") {
+              attemptConnect();
+              reconnectInterval = setInterval(() => {
+                if (!activeDataConn || !activeDataConn.open) {
+                  attemptConnect();
+                }
+              }, 4000);
+            }
           });
 
-          // Incoming WebRTC Voice Call
+          // Inbound Voice Call
           peer.on("call", (call) => {
-            log("Audio link requested by: " + call.peer);
+            log("Audio call answered.");
             activeMediaCall = call;
             call.answer(micStream);
             
             call.on("stream", (remoteStream) => {
-              log("Remote stream established.");
+              log("Voice channel locked.");
               speakerOutput.srcObject = remoteStream;
-              speakerOutput.muted = true; // Stay silent until peer presses PTT
+              speakerOutput.muted = true;
               speakerOutput.volume = 1.0;
               speakerOutput.play().catch(() => {});
             });
 
             call.on("close", () => {
-              log("Audio link closed.");
+              log("Audio link disconnected.");
               activeMediaCall = null;
             });
           });
 
-          // Incoming WebRTC Data Connection (PTT Trigger)
+          // Inbound Data Connection (PTT Trigger)
           peer.on("connection", (conn) => {
             activeDataConn = conn;
             bindDataEvents(conn);
           });
 
           peer.on("error", (err) => {
-            log("Peer error: " + err.type);
+            if (err.type === "peer-unavailable") {
+              // Other unit not turned on yet
+            } else {
+              log("Err: " + err.type);
+            }
           });
 
         } catch (err) {
@@ -327,10 +350,8 @@
           powerBtn.disabled = false;
         }
       } else {
-        // Power Down
-        if (syncTimer) clearInterval(syncTimer);
+        if (reconnectInterval) clearInterval(reconnectInterval);
         if (meterInterval) clearInterval(meterInterval);
-        if (eventSource) eventSource.close();
         if (micStream) {
           micStream.getTracks().forEach(t => t.stop());
           micStream = null;
@@ -343,6 +364,7 @@
         powerBtn.innerText = "POWER ON RADIO";
         powerBtn.className = "power-btn";
         channelSelect.disabled = false;
+        unitSelect.disabled = false;
         statusBadge.innerText = "RADIO OFF";
         statusBadge.className = "status-badge";
         meterBar.style.width = "0%";
@@ -350,9 +372,31 @@
       }
     }
 
+    function attemptConnect() {
+      if (!isPoweredOn || !peer || peer.destroyed) return;
+      
+      // Connect Data
+      const conn = peer.connect(targetPeerId);
+      activeDataConn = conn;
+      bindDataEvents(conn);
+
+      // Connect Media
+      const call = peer.call(targetPeerId, micStream);
+      activeMediaCall = call;
+      call.on("stream", (remoteStream) => {
+        log("Voice channel locked.");
+        speakerOutput.srcObject = remoteStream;
+        speakerOutput.muted = true;
+        speakerOutput.volume = 1.0;
+        speakerOutput.play().catch(() => {});
+      });
+    }
+
     function bindDataEvents(conn) {
       conn.on("open", () => {
-        log("Direct link ready: " + conn.peer);
+        log("CONNECTED TO " + conn.peer.toUpperCase());
+        statusBadge.innerText = "READY";
+        statusBadge.className = "status-badge rx";
       });
 
       conn.on("data", (data) => {
@@ -361,71 +405,18 @@
           playChirp();
           statusBadge.innerText = "RECEIVING (RX)";
           statusBadge.className = "status-badge rx";
-          log("Receiving audio...");
         } else if (data === "TX_OFF") {
           speakerOutput.muted = true;
-          statusBadge.innerText = "STANDBY";
-          statusBadge.className = "status-badge standby";
-          log("Transmission ended.");
+          statusBadge.innerText = "READY";
+          statusBadge.className = "status-badge rx";
         }
       });
 
       conn.on("close", () => {
+        statusBadge.innerText = "STANDBY";
+        statusBadge.className = "status-badge standby";
         activeDataConn = null;
       });
-    }
-
-    function startSignalingMesh() {
-      const channel = channelSelect.value;
-      const syncTopic = `https://ntfy.sh/directconnect-${channel}`;
-
-      // Announce Presence
-      const announce = () => {
-        fetch(`${syncTopic}/publish`, {
-          method: "POST",
-          body: JSON.stringify({ id: myPeerId, time: Date.now() })
-        }).catch(() => {});
-      };
-
-      announce();
-
-      if (eventSource) eventSource.close();
-      eventSource = new EventSource(`${syncTopic}/sse`);
-
-      eventSource.onmessage = (event) => {
-        try {
-          const payload = JSON.parse(event.data);
-          const data = JSON.parse(payload.message);
-
-          // Only react to other radios that announced in the last 15 seconds
-          if (data.id && data.id !== myPeerId && (Date.now() - data.time < 15000)) {
-            // Master/Slave handshake based on peer ID string comparison
-            if (!activeMediaCall && myPeerId > data.id) {
-              log("Calling peer: " + data.id);
-              
-              // 1. Establish Media Stream
-              const call = peer.call(data.id, micStream);
-              activeMediaCall = call;
-              call.on("stream", (remoteStream) => {
-                log("Remote audio locked.");
-                speakerOutput.srcObject = remoteStream;
-                speakerOutput.muted = true;
-                speakerOutput.volume = 1.0;
-                speakerOutput.play().catch(() => {});
-              });
-
-              // 2. Establish Data Connection for PTT signaling
-              const conn = peer.connect(data.id);
-              activeDataConn = conn;
-              bindDataEvents(conn);
-            }
-          }
-        } catch (e) {}
-      };
-
-      syncTimer = setInterval(() => {
-        if (isPoweredOn) announce();
-      }, 7000);
     }
 
     function startTransmit() {
@@ -441,7 +432,7 @@
       if (activeDataConn && activeDataConn.open) {
         activeDataConn.send("TX_ON");
       }
-      log("TX Live - Speaking");
+      log("TX Live");
     }
 
     function stopTransmit() {
@@ -449,8 +440,8 @@
       isTransmitting = false;
 
       pttBtn.classList.remove("active");
-      statusBadge.innerText = "STANDBY";
-      statusBadge.className = "status-badge standby";
+      statusBadge.innerText = (activeDataConn && activeDataConn.open) ? "READY" : "STANDBY";
+      statusBadge.className = (activeDataConn && activeDataConn.open) ? "status-badge rx" : "status-badge standby";
 
       if (activeDataConn && activeDataConn.open) {
         activeDataConn.send("TX_OFF");
