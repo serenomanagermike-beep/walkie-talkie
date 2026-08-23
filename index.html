@@ -41,7 +41,13 @@
       color: #8b949e;
     }
     .status-badge.tx { background: #da3633; color: #fff; }
-    .status-badge.rx { background: #238636; color: #fff; }
+    .status-badge.rx-active { background: #238636; color: #fff; animation: pulse 1s infinite alternate; }
+    .status-badge.standby { background: #21262d; color: #8b949e; }
+
+    @keyframes pulse {
+      from { opacity: 0.7; }
+      to { opacity: 1; }
+    }
 
     .channel-select {
       background: #0d1117;
@@ -140,7 +146,7 @@
   </div>
 
   <div class="screen">
-    <div id="statusBadge" class="status-badge">RADIO OFF</div>
+    <div id="statusBadge" class="status-badge standby">RADIO OFF</div>
     <select id="channelSelect" class="channel-select">
       <option value="room-alpha-direct">CHANNEL 1</option>
       <option value="room-bravo-direct">CHANNEL 2</option>
@@ -165,13 +171,12 @@
     const myId = "ptt-" + Math.floor(Math.random() * 899999 + 100000);
     let peer = null;
     let micStream = null;
-    let outboundStream = null;
     let audioCtx = null;
-    let pttGain = null;
     let analyser = null;
     let animId = null;
 
     let activeCall = null;
+    let activeDataConn = null;
     let isPoweredOn = false;
     let isTransmitting = false;
     let syncInterval = null;
@@ -219,27 +224,15 @@
             await audioCtx.resume();
           }
 
-          // 1. Bare-metal capture proven by hardware test
+          // Raw hardware mic stream
           micStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
 
-          // 2. Build Web Audio routing graph
+          // VU Meter directly off raw mic
           const micSource = audioCtx.createMediaStreamSource(micStream);
-          
-          // Visual VU Meter
           analyser = audioCtx.createAnalyser();
           analyser.fftSize = 128;
           micSource.connect(analyser);
 
-          // PTT Gain Muting (starts at 0.0 in RX Standby)
-          pttGain = audioCtx.createGain();
-          pttGain.gain.setValueAtTime(0.0, audioCtx.currentTime);
-          micSource.connect(pttGain);
-
-          const destination = audioCtx.createMediaStreamDestination();
-          pttGain.connect(destination);
-          outboundStream = destination.stream;
-
-          // Start visual meter loop
           const dataArray = new Uint8Array(analyser.frequencyBinCount);
           function drawMeter() {
             if (!isPoweredOn) return;
@@ -249,18 +242,16 @@
             let avg = sum / dataArray.length;
             let pct = Math.min(100, Math.round((avg / 128) * 100));
 
-            if (isTransmitting) {
-              meterBar.style.width = pct + "%";
-              meterBar.style.backgroundColor = "#da3633";
-            } else {
-              meterBar.style.width = Math.min(25, pct / 2) + "%";
-              meterBar.style.backgroundColor = "#238636";
-            }
+            meterBar.style.width = pct + "%";
+            meterBar.style.backgroundColor = isTransmitting ? "#da3633" : "#3fb950";
             animId = requestAnimationFrame(drawMeter);
           }
           drawMeter();
 
-          // 3. Initialize PeerJS with public STUN
+          // Prepare remote audio element (muted by default until peer transmits)
+          remoteAudio.muted = true;
+          remoteAudio.volume = 1.0;
+
           peer = new Peer(myId, {
             debug: 1,
             config: {
@@ -279,17 +270,24 @@
             powerBtn.className = "power-btn off";
             powerBtn.disabled = false;
             channelSelect.disabled = true;
-            statusBadge.innerText = "RX STANDBY";
-            statusBadge.className = "status-badge rx";
+            statusBadge.innerText = "STANDBY";
+            statusBadge.className = "status-badge standby";
             log("Radio Online ID: " + id);
 
             joinChannelMesh();
           });
 
+          // Inbound Voice Call
           peer.on("call", (call) => {
-            log("Inbound link from: " + call.peer);
-            call.answer(outboundStream);
+            log("Audio pipe connected: " + call.peer);
+            call.answer(micStream);
             attachStream(call);
+          });
+
+          // Inbound Data Connection (for PTT signals)
+          peer.on("connection", (conn) => {
+            activeDataConn = conn;
+            setupDataChannel(conn);
           });
 
           peer.on("error", (err) => {
@@ -316,31 +314,47 @@
         if (peer) peer.destroy();
         remoteAudio.srcObject = null;
         activeCall = null;
+        activeDataConn = null;
         isPoweredOn = false;
         powerBtn.innerText = "POWER ON RADIO";
         powerBtn.className = "power-btn";
         channelSelect.disabled = false;
         statusBadge.innerText = "RADIO OFF";
-        statusBadge.className = "status-badge";
+        statusBadge.className = "status-badge standby";
         meterBar.style.width = "0%";
         log("Radio powered down.");
       }
+    }
+
+    function setupDataChannel(conn) {
+      conn.on("data", (data) => {
+        if (data.type === "PTT_START") {
+          remoteAudio.muted = false;
+          playChirp();
+          statusBadge.innerText = "RX ACTIVE";
+          statusBadge.className = "status-badge rx-active";
+          log("Receiving transmission...");
+        } else if (data.type === "PTT_STOP") {
+          remoteAudio.muted = true;
+          statusBadge.innerText = "STANDBY";
+          statusBadge.className = "status-badge standby";
+          log("Channel clear.");
+        }
+      });
     }
 
     function attachStream(call) {
       activeCall = call;
 
       call.on("stream", (stream) => {
-        log("Remote audio pipeline connected.");
+        log("Incoming stream locked.");
         remoteAudio.srcObject = stream;
-        remoteAudio.volume = 1.0;
-        remoteAudio.play().catch(() => {
-          log("Tap screen to unmute incoming audio.");
-        });
+        remoteAudio.muted = true; // Stay muted until data packet arrives
+        remoteAudio.play().catch(() => {});
       });
 
       call.on("close", () => {
-        log("Remote peer disconnected.");
+        log("Peer disconnected.");
         remoteAudio.srcObject = null;
         activeCall = null;
       });
@@ -365,9 +379,16 @@
           
           if (message.id && message.id !== myId && message.action === "join") {
             if (!activeCall && myId > message.id) {
-              log("Calling peer: " + message.id);
-              const call = peer.call(message.id, outboundStream);
+              log("Linking with peer: " + message.id);
+              
+              // 1. Establish Audio Stream Call
+              const call = peer.call(message.id, micStream);
               if (call) attachStream(call);
+
+              // 2. Establish Data Connection for PTT Signaling
+              const conn = peer.connect(message.id);
+              activeDataConn = conn;
+              setupDataChannel(conn);
             }
           }
         } catch (e) {}
@@ -383,7 +404,7 @@
     }
 
     function startTransmit() {
-      if (!isPoweredOn || isTransmitting || !pttGain || !audioCtx) return;
+      if (!isPoweredOn || isTransmitting) return;
       isTransmitting = true;
       if (audioCtx.state === "suspended") audioCtx.resume();
       
@@ -393,24 +414,24 @@
       statusBadge.innerText = "TRANSMITTING (TX)";
       statusBadge.className = "status-badge tx";
 
-      // Unmute WebRTC transmission stream instantly
-      pttGain.gain.cancelScheduledValues(audioCtx.currentTime);
-      pttGain.gain.setValueAtTime(1.0, audioCtx.currentTime);
-      log("TX Live (Mic Active)");
+      if (activeDataConn && activeDataConn.open) {
+        activeDataConn.send({ type: "PTT_START" });
+      }
+      log("TX Live");
     }
 
     function stopTransmit() {
-      if (!isTransmitting || !pttGain || !audioCtx) return;
+      if (!isTransmitting) return;
       isTransmitting = false;
       
       pttBtn.classList.remove("active");
-      statusBadge.innerText = "RX STANDBY";
-      statusBadge.className = "status-badge rx";
+      statusBadge.innerText = "STANDBY";
+      statusBadge.className = "status-badge standby";
 
-      // Mute WebRTC transmission stream instantly
-      pttGain.gain.cancelScheduledValues(audioCtx.currentTime);
-      pttGain.gain.setValueAtTime(0.0, audioCtx.currentTime);
-      log("RX Standby");
+      if (activeDataConn && activeDataConn.open) {
+        activeDataConn.send({ type: "PTT_STOP" });
+      }
+      log("Standby");
     }
 
     powerBtn.addEventListener("click", togglePower);
