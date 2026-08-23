@@ -53,6 +53,22 @@
       width: 100%;
       font-weight: bold;
       outline: none;
+      margin-bottom: 8px;
+    }
+
+    .meter-container {
+      width: 100%;
+      height: 10px;
+      background: #0d1117;
+      border-radius: 5px;
+      overflow: hidden;
+      border: 1px solid #30363d;
+    }
+    .meter-bar {
+      width: 0%;
+      height: 100%;
+      background: #3fb950;
+      transition: width 0.05s ease;
     }
 
     .ptt-container {
@@ -130,6 +146,9 @@
       <option value="room-bravo-direct">CHANNEL 2</option>
       <option value="room-charlie-direct">CHANNEL 3</option>
     </select>
+    <div class="meter-container">
+      <div id="meterBar" class="meter-bar"></div>
+    </div>
   </div>
 
   <div class="ptt-container">
@@ -140,56 +159,46 @@
   
   <div id="logBox" class="log-box">System ready. Tap Power On.</div>
 
-  <div id="audioContainer"></div>
+  <!-- Hardcoded static audio receiver element -->
+  <audio id="remoteAudioPlayer" autoplay playsinline></audio>
 
   <script>
     const myId = "ptt-" + Math.floor(Math.random() * 899999 + 100000);
     let peer = null;
-    let rawMicStream = null;
-    let outboundStream = null;
-    let pttGainNode = null;
-    let audioCtx = null;
-    let activeCalls = {};
+    let localStream = null;
+    let activeCall = null;
     let isPoweredOn = false;
     let isTransmitting = false;
     let syncInterval = null;
     let eventSource = null;
+    let audioCtx = null;
+    let micAnalyser = null;
+    let animFrame = null;
 
     const powerBtn = document.getElementById("powerBtn");
     const pttBtn = document.getElementById("pttButton");
     const statusBadge = document.getElementById("statusBadge");
     const channelSelect = document.getElementById("channelSelect");
     const logBox = document.getElementById("logBox");
-    const audioContainer = document.getElementById("audioContainer");
+    const meterBar = document.getElementById("meterBar");
+    const remoteAudioPlayer = document.getElementById("remoteAudioPlayer");
 
     function log(msg) {
       logBox.innerHTML = `> ${msg}<br>` + logBox.innerHTML;
     }
 
-    function initAudioPipeline(stream) {
-      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-      audioCtx = new AudioContextClass();
+    function initAudioContext() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
       if (audioCtx.state === "suspended") {
         audioCtx.resume();
       }
-
-      const micSource = audioCtx.createMediaStreamSource(stream);
-      pttGainNode = audioCtx.createGain();
-      
-      // Default to 0 gain (Standby/RX mode - muted but pipeline stays hot)
-      pttGainNode.gain.setValueAtTime(0, audioCtx.currentTime);
-
-      const destination = audioCtx.createMediaStreamDestination();
-      micSource.connect(pttGainNode);
-      pttGainNode.connect(destination);
-
-      outboundStream = destination.stream;
     }
 
     function playChirp() {
       try {
-        if (!audioCtx) return;
-        if (audioCtx.state === "suspended") audioCtx.resume();
+        initAudioContext();
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         osc.connect(gain);
@@ -204,14 +213,45 @@
       } catch (e) {}
     }
 
+    function setupMicMonitor(stream) {
+      try {
+        initAudioContext();
+        const source = audioCtx.createMediaStreamSource(stream);
+        micAnalyser = audioCtx.createAnalyser();
+        micAnalyser.fftSize = 64;
+        source.connect(micAnalyser);
+
+        const dataArray = new Uint8Array(micAnalyser.frequencyBinCount);
+        function checkVolume() {
+          if (!isPoweredOn) return;
+          micAnalyser.getByteFrequencyData(dataArray);
+          let sum = 0;
+          for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
+          let avg = sum / dataArray.length;
+          
+          if (isTransmitting) {
+            meterBar.style.width = Math.min(100, avg * 2.5) + "%";
+            meterBar.style.backgroundColor = "#da3633";
+          } else {
+            meterBar.style.width = "0%";
+          }
+          animFrame = requestAnimationFrame(checkVolume);
+        }
+        checkVolume();
+      } catch (e) {}
+    }
+
     async function togglePower() {
+      initAudioContext();
+      remoteAudioPlayer.play().catch(() => {});
+
       if (!isPoweredOn) {
         powerBtn.innerText = "CONNECTING...";
         powerBtn.disabled = true;
-        log("Accessing microphone...");
+        log("Acquiring microphone...");
 
         try {
-          rawMicStream = await navigator.mediaDevices.getUserMedia({
+          localStream = await navigator.mediaDevices.getUserMedia({
             audio: {
               echoCancellation: true,
               noiseSuppression: true,
@@ -220,9 +260,13 @@
             video: false
           });
 
-          // Build continuous gain pipeline
-          initAudioPipeline(rawMicStream);
-          log("Audio pipeline locked (RX).");
+          // Always start track in unmuted state so WebRTC transport handshake completes
+          localStream.getAudioTracks().forEach(t => t.enabled = true);
+          setupMicMonitor(localStream);
+          
+          // Now mute for RX standby
+          localStream.getAudioTracks().forEach(t => t.enabled = false);
+          log("Mic armed (RX Standby).");
 
           peer = new Peer(myId, {
             debug: 1,
@@ -230,7 +274,6 @@
               iceServers: [
                 { urls: "stun:stun.l.google.com:19302" },
                 { urls: "stun:stun1.l.google.com:19302" },
-                { urls: "stun:stun2.l.google.com:19302" },
                 { urls: "stun:stun.cloudflare.com:3478" }
               ],
               iceCandidatePoolSize: 10
@@ -251,19 +294,13 @@
           });
 
           peer.on("call", (call) => {
-            log("Inbound call from: " + call.peer);
-            call.answer(outboundStream);
-            attachAudioStream(call);
+            log("Inbound connection from: " + call.peer);
+            call.answer(localStream);
+            attachStream(call);
           });
 
           peer.on("error", (err) => {
-            log("Radio ERR: " + err.type);
-            console.error("PeerJS Error:", err);
-          });
-
-          peer.on("disconnected", () => {
-            log("Signaling lost. Reconnecting...");
-            if (peer && !peer.destroyed) peer.reconnect();
+            log("Radio error: " + err.type);
           });
 
         } catch (err) {
@@ -274,78 +311,41 @@
       } else {
         if (syncInterval) clearInterval(syncInterval);
         if (eventSource) eventSource.close();
-        if (rawMicStream) {
-          rawMicStream.getTracks().forEach(track => track.stop());
-          rawMicStream = null;
-        }
-        if (audioCtx) {
-          audioCtx.close();
-          audioCtx = null;
+        if (animFrame) cancelAnimationFrame(animFrame);
+        if (localStream) {
+          localStream.getTracks().forEach(t => t.stop());
+          localStream = null;
         }
         if (peer) peer.destroy();
-        audioContainer.innerHTML = "";
-        activeCalls = {};
+        remoteAudioPlayer.srcObject = null;
+        activeCall = null;
         isPoweredOn = false;
         powerBtn.innerText = "POWER ON RADIO";
         powerBtn.className = "power-btn";
         channelSelect.disabled = false;
         statusBadge.innerText = "RADIO OFF";
         statusBadge.className = "status-badge";
+        meterBar.style.width = "0%";
         log("Radio powered down.");
       }
     }
 
-    function attachAudioStream(call) {
-      activeCalls[call.peer] = call;
+    function attachStream(call) {
+      activeCall = call;
 
       call.on("stream", (remoteStream) => {
-        let audio = document.getElementById("audio-" + call.peer);
-        if (!audio) {
-          audio = document.createElement("audio");
-          audio.id = "audio-" + call.peer;
-          audio.autoplay = true;
-          audio.setAttribute("playsinline", "true");
-          audioContainer.appendChild(audio);
-        }
-        
-        audio.srcObject = remoteStream;
-        
-        const playPromise = audio.play();
-        if (playPromise !== undefined) {
-          playPromise
-            .then(() => {
-              log("Live RX link: " + call.peer);
-            })
-            .catch(() => {
-              log("Audio blocked. Tap anywhere.");
-              const unlock = () => {
-                audio.play();
-                document.removeEventListener("click", unlock);
-                document.removeEventListener("touchstart", unlock);
-              };
-              document.addEventListener("click", unlock);
-              document.addEventListener("touchstart", unlock);
-            });
-        }
+        log("Streaming audio link active.");
+        remoteAudioPlayer.srcObject = remoteStream;
+        remoteAudioPlayer.volume = 1.0;
+        remoteAudioPlayer.play().catch(e => {
+          log("Tap anywhere to unblock audio");
+        });
       });
-
-      if (call.peerConnection) {
-        call.peerConnection.oniceconnectionstatechange = () => {
-          const state = call.peerConnection.iceConnectionState;
-          if (state === "failed" || state === "disconnected") {
-            log("Link " + state + " with " + call.peer);
-          }
-        };
-      }
 
       call.on("close", () => {
-        const el = document.getElementById("audio-" + call.peer);
-        if (el) el.remove();
-        delete activeCalls[call.peer];
-      });
-
-      call.on("error", () => {
-        log("Call err: " + call.peer);
+        log("Call ended.");
+        remoteAudioPlayer.srcObject = null;
+        activeCall = null;
       });
     }
 
@@ -367,10 +367,10 @@
           const message = JSON.parse(data.message);
           
           if (message.id && message.id !== myId && message.action === "join") {
-            if (!activeCalls[message.id] && myId > message.id) {
+            if (!activeCall && myId > message.id) {
               log("Calling peer: " + message.id);
-              const call = peer.call(message.id, outboundStream);
-              if (call) attachAudioStream(call);
+              const call = peer.call(message.id, localStream);
+              if (call) attachStream(call);
             }
           }
         } catch (e) {}
@@ -386,46 +386,36 @@
     }
 
     function startTransmit() {
-      if (!isPoweredOn || isTransmitting || !pttGainNode || !audioCtx) return;
+      if (!isPoweredOn || isTransmitting || !localStream) return;
       isTransmitting = true;
-      if (audioCtx.state === "suspended") audioCtx.resume();
-      
+      initAudioContext();
       playChirp();
       
       pttBtn.classList.add("active");
       statusBadge.innerText = "TRANSMITTING (TX)";
       statusBadge.className = "status-badge tx";
 
-      // Ramp gain up smoothly to avoid clicking
-      pttGainNode.gain.cancelScheduledValues(audioCtx.currentTime);
-      pttGainNode.gain.setTargetAtTime(1.0, audioCtx.currentTime, 0.02);
-      log("TX Active (Audio Live)");
+      localStream.getAudioTracks().forEach(t => t.enabled = true);
+      log("TX Live (Mic ON)");
     }
 
     function stopTransmit() {
-      if (!isTransmitting || !pttGainNode || !audioCtx) return;
+      if (!isTransmitting || !localStream) return;
       isTransmitting = false;
       
       pttBtn.classList.remove("active");
       statusBadge.innerText = "RX STANDBY";
       statusBadge.className = "status-badge rx";
 
-      // Ramp gain back to 0
-      pttGainNode.gain.cancelScheduledValues(audioCtx.currentTime);
-      pttGainNode.gain.setTargetAtTime(0, audioCtx.currentTime, 0.02);
-      log("RX Standby (Muted)");
+      localStream.getAudioTracks().forEach(t => t.enabled = false);
+      meterBar.style.width = "0%";
+      log("RX Standby (Mic OFF)");
     }
 
     powerBtn.addEventListener("click", togglePower);
 
-    pttBtn.addEventListener("touchstart", (e) => { 
-      e.preventDefault(); 
-      startTransmit(); 
-    });
-    pttBtn.addEventListener("touchend", (e) => { 
-      e.preventDefault(); 
-      stopTransmit(); 
-    });
+    pttBtn.addEventListener("touchstart", (e) => { e.preventDefault(); startTransmit(); });
+    pttBtn.addEventListener("touchend", (e) => { e.preventDefault(); stopTransmit(); });
 
     pttBtn.addEventListener("mousedown", startTransmit);
     pttBtn.addEventListener("mouseup", stopTransmit);
