@@ -3,80 +3,138 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-  <title>Direct Connect Walkie-Talkie</title>
+  <title>Friend Radio</title>
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="theme-color" content="#090d16" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
   <style>
-    * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
+    * { box-sizing: border-box; user-select: none; -webkit-user-select: none; margin: 0; padding: 0; }
+    
     body {
-      margin: 0;
-      background-color: #0d1117;
+      background: radial-gradient(circle at top, #161f30 0%, #090d16 100%);
       color: #e6edf3;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: space-between;
       height: 100dvh;
       padding: 16px;
+      overflow: hidden;
     }
-    .header h1 { margin: 0; font-size: 1.3rem; letter-spacing: 2px; color: #58a6ff; text-align: center; }
-    
-    .screen {
-      background-color: #161b22;
-      border: 2px solid #30363d;
-      border-radius: 12px;
+
+    /* Radio Header */
+    .header {
       width: 100%;
       max-width: 360px;
-      padding: 12px 16px;
       text-align: center;
+      padding-top: 4px;
     }
+    .header h1 {
+      font-size: 1.4rem;
+      letter-spacing: 3px;
+      font-weight: 800;
+      color: #38bdf8;
+      text-shadow: 0 0 12px rgba(56, 189, 248, 0.4);
+    }
+    .header .tagline {
+      font-size: 0.72rem;
+      color: #64748b;
+      letter-spacing: 1.5px;
+      margin-top: 2px;
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    /* LCD Screen Chassis */
+    .screen {
+      background: #0b1120;
+      border: 2px solid #1e293b;
+      box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.8), 0 4px 16px rgba(0, 0, 0, 0.4);
+      border-radius: 14px;
+      width: 100%;
+      max-width: 360px;
+      padding: 14px;
+      text-align: center;
+      position: relative;
+    }
+
     .status-badge {
       display: inline-block;
-      padding: 6px 14px;
+      padding: 6px 16px;
       border-radius: 20px;
-      font-weight: bold;
+      font-weight: 800;
       font-size: 0.85rem;
-      margin-bottom: 8px;
-      background: #21262d;
-      color: #8b949e;
+      letter-spacing: 1px;
+      margin-bottom: 10px;
+      background: #1e293b;
+      color: #94a3b8;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      transition: all 0.2s ease;
     }
-    .status-badge.tx { background: #da3633; color: #fff; }
-    .status-badge.rx { background: #238636; color: #fff; animation: pulse 0.6s infinite alternate; }
-    .status-badge.online { background: #1f6feb; color: #fff; }
+    .status-badge.tx {
+      background: #ef4444;
+      color: #ffffff;
+      box-shadow: 0 0 16px rgba(239, 68, 68, 0.6);
+      border-color: #f87171;
+    }
+    .status-badge.rx {
+      background: #10b981;
+      color: #ffffff;
+      box-shadow: 0 0 16px rgba(16, 185, 129, 0.6);
+      animation: pulse 0.6s infinite alternate;
+      border-color: #34d399;
+    }
+    .status-badge.online {
+      background: #0284c7;
+      color: #ffffff;
+      box-shadow: 0 0 12px rgba(2, 132, 199, 0.4);
+      border-color: #38bdf8;
+    }
 
     @keyframes pulse {
-      from { opacity: 0.7; }
-      to { opacity: 1; }
+      from { opacity: 0.7; transform: scale(0.98); }
+      to { opacity: 1; transform: scale(1.02); }
     }
 
+    /* Channel Selector */
     .channel-select {
-      background: #0d1117;
-      color: #58a6ff;
-      border: 1px solid #30363d;
-      padding: 8px 12px;
+      background: #0f172a;
+      color: #38bdf8;
+      border: 1px solid #334155;
+      padding: 10px 14px;
       border-radius: 8px;
       font-size: 0.95rem;
       width: 100%;
-      font-weight: bold;
+      font-weight: 700;
       outline: none;
-      margin-bottom: 8px;
+      margin-bottom: 10px;
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
+    }
+    .channel-select:disabled {
+      color: #94a3b8;
+      opacity: 0.8;
     }
 
+    /* Audio Meter */
     .meter-container {
       width: 100%;
       height: 10px;
-      background: #0d1117;
-      border-radius: 5px;
+      background: #0f172a;
+      border-radius: 6px;
       overflow: hidden;
-      border: 1px solid #30363d;
+      border: 1px solid #1e293b;
     }
     .meter-bar {
       width: 0%;
       height: 100%;
-      background: #3fb950;
+      background: #10b981;
       transition: width 0.05s ease;
     }
 
+    /* Center PTT Button */
     .ptt-container {
       display: flex;
       flex-direction: column;
@@ -85,72 +143,99 @@
       margin: 10px 0;
     }
     .ptt-btn {
-      width: 160px;
-      height: 160px;
+      width: 170px;
+      height: 170px;
       border-radius: 50%;
-      border: 6px solid #30363d;
-      background: radial-gradient(circle, #21262d 0%, #161b22 100%);
-      color: #8b949e;
-      font-size: 1.3rem;
-      font-weight: bold;
+      border: 8px solid #1e293b;
+      background: radial-gradient(circle at 35% 35%, #334155 0%, #0f172a 100%);
+      color: #94a3b8;
+      font-size: 1.4rem;
+      font-weight: 900;
+      letter-spacing: 2px;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.6), inset 0 2px 6px rgba(255, 255, 255, 0.1);
       cursor: pointer;
       touch-action: none;
       transition: all 0.1s ease;
     }
+    .ptt-btn span {
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 1px;
+      color: #64748b;
+      margin-top: 2px;
+    }
     .ptt-btn.active {
-      border-color: #f85149;
-      background: radial-gradient(circle, #da3633 0%, #b62324 100%);
+      border-color: #ef4444;
+      background: radial-gradient(circle at 35% 35%, #ef4444 0%, #b91c1c 100%);
       color: #ffffff;
-      box-shadow: 0 0 30px rgba(218, 54, 51, 0.6);
+      box-shadow: 0 0 35px rgba(239, 68, 68, 0.7), inset 0 2px 6px rgba(255, 255, 255, 0.2);
       transform: scale(0.96);
     }
+    .ptt-btn.active span {
+      color: #fee2e2;
+    }
 
+    /* Power Button */
     .power-btn {
-      background-color: #238636;
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      padding: 12px;
+      background: linear-gradient(180deg, #10b981 0%, #059669 100%);
+      color: #ffffff;
+      border: 1px solid #34d399;
+      border-radius: 10px;
+      padding: 14px;
       font-size: 0.95rem;
-      font-weight: bold;
+      font-weight: 800;
+      letter-spacing: 1px;
       width: 100%;
       max-width: 360px;
       cursor: pointer;
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
+      transition: all 0.15s ease;
     }
-    .power-btn.off { background-color: #da3633; }
+    .power-btn:active {
+      transform: scale(0.98);
+    }
+    .power-btn.off {
+      background: linear-gradient(180deg, #ef4444 0%, #b91c1c 100%);
+      border-color: #f87171;
+      box-shadow: 0 4px 14px rgba(239, 68, 68, 0.3);
+    }
 
+    /* Log Box */
     .log-box {
       width: 100%;
       max-width: 360px;
-      height: 80px;
-      background: #000;
-      border: 1px solid #30363d;
-      border-radius: 6px;
-      font-family: monospace;
+      height: 75px;
+      background: #050811;
+      border: 1px solid #1e293b;
+      border-radius: 8px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
       font-size: 0.72rem;
-      color: #3fb950;
-      padding: 6px;
+      color: #38bdf8;
+      padding: 8px;
       overflow-y: auto;
       text-align: left;
+      line-height: 1.35;
     }
   </style>
 </head>
 <body>
 
   <div class="header">
-    <h1>DIRECT CONNECT</h1>
+    <h1>FRIEND RADIO</h1>
+    <div class="tagline">Direct Connect PTT</div>
   </div>
 
   <div class="screen">
     <div id="statusBadge" class="status-badge">RADIO OFF</div>
     <select id="channelSelect" class="channel-select">
-      <option value="sereno-ch1">CHANNEL 1 (Operations)</option>
-      <option value="sereno-ch2">CHANNEL 2 (Maintenance)</option>
-      <option value="sereno-ch3">CHANNEL 3 (Security)</option>
+      <option value="friend-ch1">CHANNEL 1</option>
+      <option value="friend-ch2">CHANNEL 2</option>
+      <option value="friend-ch3">CHANNEL 3</option>
+      <option value="friend-ch4">CHANNEL 4</option>
     </select>
     <div class="meter-container">
       <div id="meterBar" class="meter-bar"></div>
@@ -158,15 +243,18 @@
   </div>
 
   <div class="ptt-container">
-    <div id="pttButton" class="ptt-btn">PTT</div>
+    <div id="pttButton" class="ptt-btn">
+      PTT
+      <span>PUSH TO TALK</span>
+    </div>
   </div>
 
   <button id="powerBtn" class="power-btn">POWER ON RADIO</button>
   
-  <div id="logBox" class="log-box">Select Channel & Power On.</div>
+  <div id="logBox" class="log-box">Select Channel & Tap Power On.</div>
 
   <script>
-    const clientId = "radio-" + Math.floor(100000 + Math.random() * 900000);
+    const clientId = "fr-" + Math.floor(100000 + Math.random() * 900000);
     let mqttClient = null;
     let micStream = null;
     let mediaRecorder = null;
@@ -233,7 +321,7 @@
         powerBtn.disabled = true;
 
         const channel = channelSelect.value;
-        log(`Joining ${channel.toUpperCase()}...`);
+        log(`Connecting to ${channel.toUpperCase()}...`);
 
         try {
           await requestWakeLock();
@@ -264,18 +352,18 @@
 
             if (isTransmitting) {
               meterBar.style.width = pct + "%";
-              meterBar.style.backgroundColor = "#da3633";
+              meterBar.style.backgroundColor = "#ef4444";
             } else {
               meterBar.style.width = "0%";
             }
           }, 50);
 
-          // Broker Connection
+          // Connect to Broker
           mqttClient = new Paho.MQTT.Client("broker.emqx.io", 8084, clientId);
 
           mqttClient.onConnectionLost = (responseObject) => {
             if (responseObject.errorCode !== 0) {
-              log("Link lost: " + responseObject.errorMessage);
+              log("Link disconnected: " + responseObject.errorMessage);
               statusBadge.innerText = "OFFLINE";
               statusBadge.className = "status-badge";
             }
@@ -297,14 +385,14 @@
               channelSelect.disabled = true;
               statusBadge.innerText = "ONLINE";
               statusBadge.className = "status-badge online";
-              log(`Online ID: ${clientId}`);
+              log(`Radio online: ${clientId}`);
 
-              const topic = `serenodc/radio/${channel}`;
+              const topic = `friendradio/${channel}`;
               mqttClient.subscribe(topic);
-              log(`Channel ready: ${channel}`);
+              log(`Monitoring ${channel}`);
             },
             onFailure: (err) => {
-              log("Broker error: " + err.errorMessage);
+              log("Connection error: " + err.errorMessage);
               powerBtn.innerText = "POWER ON RADIO";
               powerBtn.disabled = false;
             }
@@ -335,7 +423,7 @@
         statusBadge.innerText = "RADIO OFF";
         statusBadge.className = "status-badge";
         meterBar.style.width = "0%";
-        log("Radio powered down.");
+        log("Radio powered off.");
       }
     }
 
@@ -356,7 +444,6 @@
         if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = "";
       }
 
-      // 16 kbps Opus profile: high-clarity voice with ~80% smaller payload size
       const options = mimeType ? { mimeType, audioBitsPerSecond: 16000 } : { audioBitsPerSecond: 16000 };
       mediaRecorder = new MediaRecorder(micStream, options);
 
@@ -379,7 +466,7 @@
           sender: clientId,
           data: base64Data
         }));
-        voiceMsg.destinationName = `serenodc/radio/${channel}`;
+        voiceMsg.destinationName = `friendradio/${channel}`;
         mqttClient.send(voiceMsg);
       };
 
@@ -431,7 +518,7 @@
 
         source.start(0);
       } catch (err) {
-        log("Playback err: " + err.message);
+        log("Playback error: " + err.message);
       }
     }
 
@@ -456,11 +543,11 @@
 
     powerBtn.addEventListener("click", togglePower);
 
-    // Mobile touch controls
+    // Mobile touch
     pttBtn.addEventListener("touchstart", (e) => { e.preventDefault(); startTransmit(); });
     pttBtn.addEventListener("touchend", (e) => { e.preventDefault(); stopTransmit(); });
 
-    // Desktop controls
+    // Desktop click
     pttBtn.addEventListener("mousedown", startTransmit);
     pttBtn.addEventListener("mouseup", stopTransmit);
   </script>
