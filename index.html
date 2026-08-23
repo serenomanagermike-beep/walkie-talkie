@@ -12,7 +12,7 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="theme-color" content="#070b14" />
+  <meta name="theme-color" content="#082f49" />
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
 
@@ -22,7 +22,8 @@
     * { box-sizing: border-box; user-select: none; -webkit-user-select: none; margin: 0; padding: 0; }
     
     body {
-      background: radial-gradient(circle at 50% 10%, #172554 0%, #070b14 100%);
+      background: linear-gradient(180deg, rgba(8, 47, 73, 0.82) 0%, rgba(12, 74, 110, 0.88) 100%),
+                  url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1000&q=80') center/cover no-repeat;
       color: #f8fafc;
       font-family: 'Inter', -apple-system, sans-serif;
       display: flex;
@@ -30,7 +31,7 @@
       align-items: center;
       justify-content: space-between;
       height: 100dvh;
-      padding: 14px 16px;
+      padding: 12px 16px;
       overflow: hidden;
     }
 
@@ -46,26 +47,29 @@
       letter-spacing: 4px;
       font-weight: 800;
       color: #38bdf8;
-      text-shadow: 0 0 16px rgba(56, 189, 248, 0.5);
+      text-shadow: 0 0 16px rgba(56, 189, 248, 0.6);
     }
     .header .tagline {
       font-family: 'Chakra Petch', sans-serif;
       font-size: 0.7rem;
-      color: #64748b;
+      color: #7dd3fc;
       letter-spacing: 2.5px;
       text-transform: uppercase;
       font-weight: 700;
       margin-top: 2px;
     }
 
+    /* Screen Glass Panel */
     .screen {
-      background: linear-gradient(180deg, rgba(15, 23, 42, 0.95) 0%, rgba(10, 15, 30, 0.98) 100%);
-      border: 1.5px solid #1e293b;
-      box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.7), 0 8px 30px rgba(0, 0, 0, 0.5);
+      background: rgba(8, 47, 73, 0.75);
+      border: 1.5px solid rgba(56, 189, 248, 0.35);
+      box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.4), 0 8px 30px rgba(0, 0, 0, 0.4);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
       border-radius: 18px;
       width: 100%;
       max-width: 380px;
-      padding: 14px 12px;
+      padding: 12px;
       text-align: center;
     }
 
@@ -73,35 +77,35 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 12px;
-      padding: 0 4px;
+      margin-bottom: 10px;
+      padding: 0 2px;
     }
 
     .status-badge {
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      padding: 6px 14px;
+      padding: 5px 12px;
       border-radius: 10px;
       font-family: 'Chakra Petch', sans-serif;
       font-weight: 700;
-      font-size: 0.78rem;
+      font-size: 0.75rem;
       letter-spacing: 1px;
-      background: #0f172a;
-      color: #64748b;
-      border: 1px solid #1e293b;
+      background: rgba(15, 23, 42, 0.6);
+      color: #94a3b8;
+      border: 1px solid rgba(255, 255, 255, 0.15);
       transition: all 0.2s ease;
     }
     .status-badge.tx {
       background: linear-gradient(180deg, #ef4444 0%, #dc2626 100%);
       color: #ffffff;
-      box-shadow: 0 0 16px rgba(239, 68, 68, 0.7);
+      box-shadow: 0 0 16px rgba(239, 68, 68, 0.8);
       border-color: #f87171;
     }
     .status-badge.rx {
       background: linear-gradient(180deg, #10b981 0%, #059669 100%);
       color: #ffffff;
-      box-shadow: 0 0 16px rgba(16, 185, 129, 0.7);
+      box-shadow: 0 0 16px rgba(16, 185, 129, 0.8);
       animation: pulse 0.6s infinite alternate;
       border-color: #34d399;
     }
@@ -119,23 +123,23 @@
 
     .user-pill {
       font-family: 'Chakra Petch', sans-serif;
-      font-size: 0.8rem;
+      font-size: 0.78rem;
       font-weight: 700;
-      color: #38bdf8;
-      background: #070c18;
-      border: 1px solid #1e293b;
-      padding: 6px 12px;
+      color: #fef08a;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(254, 240, 138, 0.3);
+      padding: 5px 10px;
       border-radius: 10px;
       letter-spacing: 1px;
     }
 
     .contacts-label {
       font-family: 'Chakra Petch', sans-serif;
-      font-size: 0.7rem;
-      color: #64748b;
+      font-size: 0.68rem;
+      color: #bae6fd;
       letter-spacing: 1.5px;
       text-transform: uppercase;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
       text-align: left;
       font-weight: 700;
       display: flex;
@@ -143,81 +147,80 @@
       padding: 0 4px;
     }
 
-    /* Industrial Beveled Push-Buttons */
+    /* Beachy / Oceanic Tabs */
     .contacts-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
-      gap: 8px;
-      margin-bottom: 12px;
+      gap: 6px;
+      margin-bottom: 10px;
     }
     .contact-btn {
-      background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
-      color: #94a3b8;
-      border: 1px solid #334155;
-      padding: 12px 10px;
+      background: linear-gradient(180deg, rgba(14, 116, 144, 0.7) 0%, rgba(21, 94, 117, 0.85) 100%);
+      color: #e0f2fe;
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      padding: 10px 8px;
       border-radius: 10px;
       font-family: 'Chakra Petch', sans-serif;
-      font-size: 0.82rem;
+      font-size: 0.78rem;
       font-weight: 700;
-      letter-spacing: 0.8px;
+      letter-spacing: 0.6px;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      box-shadow: 0 3px 6px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.08);
+      box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3);
       transition: all 0.15s ease;
     }
     .contact-btn .indicator {
       width: 8px;
       height: 8px;
       border-radius: 50%;
-      background: #334155;
-      box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.8);
+      background: rgba(255, 255, 255, 0.25);
     }
     .contact-btn:active {
       transform: scale(0.98);
     }
     .contact-btn.active {
-      background: linear-gradient(180deg, #0284c7 0%, #0369a1 100%);
+      background: linear-gradient(180deg, #0ea5e9 0%, #0284c7 100%);
       color: #ffffff;
-      border-color: #38bdf8;
-      box-shadow: 0 4px 14px rgba(2, 132, 199, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.2);
+      border-color: #7dd3fc;
+      box-shadow: 0 0 14px rgba(56, 189, 248, 0.6);
     }
     .contact-btn.active .indicator {
-      background: #38bdf8;
-      box-shadow: 0 0 10px #38bdf8;
+      background: #fef08a;
+      box-shadow: 0 0 8px #fef08a;
     }
     .contact-btn.talkall {
       grid-column: span 2;
-      background: linear-gradient(180deg, #2563eb 0%, #1d4ed8 100%);
-      border-color: #60a5fa;
+      background: linear-gradient(180deg, #0284c7 0%, #0369a1 100%);
+      border-color: #38bdf8;
       color: #ffffff;
       font-weight: 800;
-      font-size: 0.9rem;
-      padding: 13px 12px;
-      box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.25);
+      font-size: 0.85rem;
+      padding: 11px 12px;
+      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.4);
     }
     .contact-btn.talkall .indicator {
-      background: #93c5fd;
-      box-shadow: 0 0 8px #93c5fd;
+      background: #fef08a;
+      box-shadow: 0 0 8px #fef08a;
     }
 
     .meter-container {
       width: 100%;
-      height: 8px;
-      background: #070c18;
+      height: 7px;
+      background: rgba(15, 23, 42, 0.8);
       border-radius: 4px;
       overflow: hidden;
-      border: 1px solid #1e293b;
+      border: 1px solid rgba(56, 189, 248, 0.3);
     }
     .meter-bar {
       width: 0%;
       height: 100%;
-      background: #10b981;
+      background: #38bdf8;
       transition: width 0.05s ease;
     }
 
-    /* PTT Button Chassis */
+    /* Giant Thumbs-Up PTT Button */
     .ptt-container {
       display: flex;
       flex-direction: column;
@@ -226,42 +229,51 @@
       margin: 4px 0;
     }
     .ptt-btn {
-      width: 155px;
-      height: 155px;
+      width: 165px;
+      height: 165px;
       border-radius: 50%;
-      border: 8px solid #1e293b;
-      background: radial-gradient(circle at 35% 35%, #334155 0%, #0f172a 100%);
-      color: #94a3b8;
-      font-family: 'Chakra Petch', sans-serif;
-      font-size: 1.5rem;
-      font-weight: 800;
-      letter-spacing: 2px;
+      border: 6px solid #38bdf8;
+      background: radial-gradient(circle at 35% 35%, #0ea5e9 0%, #0369a1 100%);
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.7), inset 0 2px 6px rgba(255, 255, 255, 0.12);
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6), 0 0 20px rgba(56, 189, 248, 0.4);
       cursor: pointer;
       touch-action: none;
-      transition: all 0.1s ease;
+      transition: all 0.12s ease;
+      position: relative;
+    }
+    .ptt-btn svg {
+      width: 82px;
+      height: 82px;
+      fill: #ffffff;
+      filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4));
+      transition: transform 0.1s ease;
+      pointer-events: none;
     }
     .ptt-btn span {
       font-family: 'Chakra Petch', sans-serif;
       font-size: 0.72rem;
-      font-weight: 700;
+      font-weight: 800;
       letter-spacing: 1px;
-      color: #64748b;
-      margin-top: 3px;
+      color: #fef08a;
+      margin-top: 2px;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.6);
+      pointer-events: none;
     }
     .ptt-btn.active {
       border-color: #ef4444;
       background: radial-gradient(circle at 35% 35%, #ef4444 0%, #991b1b 100%);
-      color: #ffffff;
-      box-shadow: 0 0 35px rgba(239, 68, 68, 0.75), inset 0 2px 6px rgba(255, 255, 255, 0.25);
-      transform: scale(0.96);
+      box-shadow: 0 0 40px rgba(239, 68, 68, 0.85);
+      transform: scale(0.95);
+    }
+    .ptt-btn.active svg {
+      transform: scale(0.92);
+      fill: #fee2e2;
     }
     .ptt-btn.active span {
-      color: #fee2e2;
+      color: #ffffff;
     }
 
     /* Power Button */
@@ -270,34 +282,35 @@
       color: #ffffff;
       border: 1.5px solid #34d399;
       border-radius: 12px;
-      padding: 14px;
+      padding: 13px;
       font-family: 'Chakra Petch', sans-serif;
-      font-size: 1rem;
+      font-size: 0.95rem;
       font-weight: 800;
       letter-spacing: 1.5px;
       width: 100%;
       max-width: 380px;
       cursor: pointer;
-      box-shadow: 0 4px 16px rgba(16, 185, 129, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.25);
+      box-shadow: 0 4px 16px rgba(16, 185, 129, 0.4);
       transition: all 0.15s ease;
     }
     .power-btn:active { transform: scale(0.98); }
     .power-btn.off {
       background: linear-gradient(180deg, #ef4444 0%, #b91c1c 100%);
       border-color: #f87171;
-      box-shadow: 0 4px 16px rgba(239, 68, 68, 0.35);
+      box-shadow: 0 4px 16px rgba(239, 68, 68, 0.4);
     }
 
     .log-box {
       width: 100%;
       max-width: 380px;
-      height: 55px;
-      background: #050811;
-      border: 1px solid #1e293b;
+      height: 50px;
+      background: rgba(8, 47, 73, 0.8);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      backdrop-filter: blur(8px);
       border-radius: 8px;
-      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-family: ui-monospace, monospace;
       font-size: 0.68rem;
-      color: #38bdf8;
+      color: #7dd3fc;
       padding: 6px 8px;
       overflow-y: auto;
       text-align: left;
@@ -320,7 +333,7 @@
 
     <div class="contacts-label">
       <span>Channels & Contacts</span>
-      <span id="targetModeLabel" style="color: #38bdf8;">BROADCAST</span>
+      <span id="targetModeLabel" style="color: #fef08a;">BROADCAST</span>
     </div>
 
     <div class="contacts-grid">
@@ -361,7 +374,9 @@
 
   <div class="ptt-container">
     <div id="pttButton" class="ptt-btn">
-      PTT
+      <svg viewBox="0 0 24 24">
+        <path d="M23 10a2 2 0 0 0-2-2h-6.32l.96-4.57c.02-.1.03-.21.03-.32 0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10a2 2 0 0 0 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2zM1 21h4V9H1v12z"/>
+      </svg>
       <span id="pttTargetLabel">TALK ALL</span>
     </div>
   </div>
@@ -389,7 +404,7 @@
     }
 
     const myDisplayName = userMap[myId] || "Authorized User";
-    document.getElementById("userTag").innerText = `📻 ${myDisplayName.toUpperCase()}`;
+    document.getElementById("userTag").innerText = `🌴 ${myDisplayName.toUpperCase()}`;
 
     let selectedTarget = "talkall";
     let mqttClient = null;
