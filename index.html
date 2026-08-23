@@ -186,7 +186,7 @@
       color: #e0f2fe;
       padding: 8px 6px;
       font-family: 'Chakra Petch', sans-serif;
-      font-size: 0.74rem;
+      font-size: 0.72rem;
       font-weight: 700;
       letter-spacing: 0.5px;
       cursor: pointer;
@@ -482,7 +482,7 @@
 
       <div class="contact-card" data-target="mikey">
         <button class="contact-btn">
-          <span>MIKEY</span>
+          <span>MIKEY (PERSONAL)</span>
           <span class="indicator"></span>
         </button>
         <button class="msg-btn" title="Message Mikey">💬</button>
@@ -490,10 +490,18 @@
 
       <div class="contact-card" data-target="work">
         <button class="contact-btn">
-          <span>WORK TEST PHONE</span>
+          <span>WORK PHONE</span>
           <span class="indicator"></span>
         </button>
         <button class="msg-btn" title="Message Work Phone">💬</button>
+      </div>
+
+      <div class="contact-card" data-target="laptop">
+        <button class="contact-btn">
+          <span>LAPTOP</span>
+          <span class="indicator"></span>
+        </button>
+        <button class="msg-btn" title="Message Laptop">💬</button>
       </div>
     </div>
 
@@ -534,15 +542,16 @@
       "matt": "Minnesota Matt",
       "davey": "Davey",
       "chuckie": "Chuckie",
-      "mikey": "Mikey",
-      "work": "Work Test Phone"
+      "mikey": "Mikey (Personal)",
+      "work": "Work Phone",
+      "laptop": "Laptop"
     };
 
     const urlParams = new URLSearchParams(window.location.search);
     const urlUser = urlParams.get("user");
     
-    // Laptop / URL Identity lock
-    let myId = urlUser || localStorage.getItem("fr_my_id") || "work";
+    // Default fallback to laptop if loaded on a generic browser without tags
+    let myId = urlUser || localStorage.getItem("fr_my_id") || "laptop";
     if (urlUser) {
       localStorage.setItem("fr_my_id", myId);
     }
