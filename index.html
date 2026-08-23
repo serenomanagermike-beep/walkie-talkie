@@ -177,7 +177,6 @@
     let peer = null;
     let rawMicStream = null;
     let audioContext = null;
-    let pttGainNode = null;
     let micAnalyser = null;
     let meterInterval = null;
     let isPoweredOn = false;
@@ -185,6 +184,7 @@
 
     let targetPeerId = null;
     let activeCall = null;
+    let activeDataConn = null;
     let isCalling = false;
 
     const powerBtn = document.getElementById("powerBtn");
@@ -235,9 +235,8 @@
     async function togglePower() {
       const ctx = getAudioContext();
 
-      // Force immediate unlock on user touch
-      speakerOutput.muted = false;
-      speakerOutput.volume = 1.0;
+      // Pre-unlock speaker element with user touch
+      speakerOutput.muted = true;
       speakerOutput.play().catch(() => {});
 
       if (!isPoweredOn) {
@@ -254,27 +253,15 @@
         log(`Starting ${myUnit.toUpperCase()} on ${channel.toUpperCase()}`);
 
         try {
+          // Direct bare-metal mic stream: ALWAYS keep track enabled so Opus never drops
           rawMicStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
 
-          // Web Audio routing: Raw Mic -> Analyser -> pttGainNode -> Destination Stream
           const micSource = ctx.createMediaStreamSource(rawMicStream);
-          
           micAnalyser = ctx.createAnalyser();
           micAnalyser.fftSize = 64;
           micSource.connect(micAnalyser);
 
-          // PTT Gain Node
-          pttGainNode = ctx.createGain();
-          pttGainNode.gain.setValueAtTime(0.0001, ctx.currentTime); // Keep carrier warm
-
-          micSource.connect(pttGainNode);
-
-          const audioDestination = ctx.createMediaStreamDestination();
-          pttGainNode.connect(audioDestination);
-
-          const outboundStream = audioDestination.stream;
-
-          // Mic VU Meter
+          // VU Meter Loop
           const dataArray = new Uint8Array(micAnalyser.frequencyBinCount);
           meterInterval = setInterval(() => {
             if (!isPoweredOn) return;
@@ -317,26 +304,31 @@
 
             if (myUnit === "unit1") {
               setTimeout(() => {
-                callPeer(outboundStream);
+                callPeer();
               }, 1000);
             }
           });
 
           // Inbound Voice Call
           peer.on("call", (call) => {
-            if (activeCall) return; // Ignore duplicate calls
-            log("Connected to peer audio.");
+            if (activeCall) return;
+            log("Voice call connected.");
             activeCall = call;
-            call.answer(outboundStream);
+            call.answer(rawMicStream);
             handleIncomingStream(call);
+          });
+
+          // Inbound Data Connection (for instant RX/TX alerts)
+          peer.on("connection", (conn) => {
+            activeDataConn = conn;
+            bindDataEvents(conn);
           });
 
           peer.on("error", (err) => {
             if (err.type === "peer-unavailable") {
-              // Retry calling unit2 after 2.5s if not online yet
               if (myUnit === "unit1" && !activeCall) {
                 setTimeout(() => {
-                  callPeer(outboundStream);
+                  callPeer();
                 }, 2500);
               }
             } else {
@@ -358,6 +350,7 @@
         if (peer) peer.destroy();
         speakerOutput.srcObject = null;
         activeCall = null;
+        activeDataConn = null;
         isCalling = false;
         isPoweredOn = false;
         powerBtn.innerText = "POWER ON RADIO";
@@ -371,26 +364,34 @@
       }
     }
 
-    function callPeer(stream) {
+    function callPeer() {
       if (!isPoweredOn || activeCall || isCalling) return;
       isCalling = true;
       log("Linking to " + targetPeerId.toUpperCase());
-      
-      const call = peer.call(targetPeerId, stream);
+
+      // 1. Establish Voice Stream
+      const call = peer.call(targetPeerId, rawMicStream);
       if (call) {
         activeCall = call;
         handleIncomingStream(call);
+      }
+
+      // 2. Establish Data Channel
+      const conn = peer.connect(targetPeerId);
+      if (conn) {
+        activeDataConn = conn;
+        bindDataEvents(conn);
       }
     }
 
     function handleIncomingStream(call) {
       call.on("stream", (remoteStream) => {
-        log("RADIO LINK ESTABLISHED (READY)");
+        log("VOICE LINK ACTIVE (READY)");
         statusBadge.innerText = "READY";
         statusBadge.className = "status-badge rx";
 
         speakerOutput.srcObject = remoteStream;
-        speakerOutput.muted = false;
+        speakerOutput.muted = true; // Stay silent in standby
         speakerOutput.volume = 1.0;
         speakerOutput.play().catch(() => {});
       });
@@ -404,36 +405,58 @@
       });
     }
 
-    function startTransmit() {
-      if (!isPoweredOn || isTransmitting || !pttGainNode || !audioContext) return;
-      isTransmitting = true;
-      if (audioContext.state === "suspended") audioContext.resume();
-      
-      playChirp();
+    function bindDataEvents(conn) {
+      conn.on("open", () => {
+        log("DATA LINK READY");
+      });
 
-      // Open audio gate to transmit voice
-      pttGainNode.gain.cancelScheduledValues(audioContext.currentTime);
-      pttGainNode.gain.setValueAtTime(1.0, audioContext.currentTime);
+      conn.on("data", (data) => {
+        if (data === "TX_ON") {
+          speakerOutput.muted = false; // Unmute remote voice instantly
+          playChirp();
+          statusBadge.innerText = "RECEIVING (RX)";
+          statusBadge.className = "status-badge rx";
+        } else if (data === "TX_OFF") {
+          speakerOutput.muted = true; // Mute back to standby
+          statusBadge.innerText = "READY";
+          statusBadge.className = "status-badge rx";
+        }
+      });
+
+      conn.on("close", () => {
+        activeDataConn = null;
+      });
+    }
+
+    function startTransmit() {
+      if (!isPoweredOn || isTransmitting) return;
+      isTransmitting = true;
+      getAudioContext();
+      playChirp();
 
       pttBtn.classList.add("active");
       statusBadge.innerText = "TRANSMITTING (TX)";
       statusBadge.className = "status-badge tx";
-      log("TX Live (Transmitting)");
+
+      if (activeDataConn && activeDataConn.open) {
+        activeDataConn.send("TX_ON");
+      }
+      log("TX Live (Speaking)");
     }
 
     function stopTransmit() {
-      if (!isTransmitting || !pttGainNode || !audioContext) return;
+      if (!isTransmitting) return;
       isTransmitting = false;
-
-      // Close audio gate
-      pttGainNode.gain.cancelScheduledValues(audioContext.currentTime);
-      pttGainNode.gain.setValueAtTime(0.0001, audioContext.currentTime);
 
       pttBtn.classList.remove("active");
       statusBadge.innerText = activeCall ? "READY" : "STANDBY";
       statusBadge.className = activeCall ? "status-badge rx" : "status-badge standby";
+
+      if (activeDataConn && activeDataConn.open) {
+        activeDataConn.send("TX_OFF");
+      }
       meterBar.style.width = "0%";
-      log("RX Standby");
+      log("Standby");
     }
 
     powerBtn.addEventListener("click", togglePower);
