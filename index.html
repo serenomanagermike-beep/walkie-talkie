@@ -145,7 +145,10 @@
   <script>
     const myId = "ptt-" + Math.floor(Math.random() * 899999 + 100000);
     let peer = null;
-    let localStream = null;
+    let rawMicStream = null;
+    let outboundStream = null;
+    let pttGainNode = null;
+    let audioCtx = null;
     let activeCalls = {};
     let isPoweredOn = false;
     let isTransmitting = false;
@@ -163,44 +166,52 @@
       logBox.innerHTML = `> ${msg}<br>` + logBox.innerHTML;
     }
 
-    let audioCtx = null;
-    function getAudioContext() {
-      if (!audioCtx) {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      }
+    function initAudioPipeline(stream) {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      audioCtx = new AudioContextClass();
       if (audioCtx.state === "suspended") {
         audioCtx.resume();
       }
-      return audioCtx;
+
+      const micSource = audioCtx.createMediaStreamSource(stream);
+      pttGainNode = audioCtx.createGain();
+      
+      // Default to 0 gain (Standby/RX mode - muted but pipeline stays hot)
+      pttGainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+
+      const destination = audioCtx.createMediaStreamDestination();
+      micSource.connect(pttGainNode);
+      pttGainNode.connect(destination);
+
+      outboundStream = destination.stream;
     }
 
     function playChirp() {
       try {
-        const ctx = getAudioContext();
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
+        if (!audioCtx) return;
+        if (audioCtx.state === "suspended") audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
         osc.connect(gain);
-        gain.connect(ctx.destination);
+        gain.connect(audioCtx.destination);
         osc.type = "sine";
-        osc.frequency.setValueAtTime(1800, ctx.currentTime);
-        osc.frequency.setValueAtTime(2400, ctx.currentTime + 0.05);
-        gain.gain.setValueAtTime(0.3, ctx.currentTime);
-        gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.12);
+        osc.frequency.setValueAtTime(1800, audioCtx.currentTime);
+        osc.frequency.setValueAtTime(2400, audioCtx.currentTime + 0.05);
+        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.12);
         osc.start();
-        osc.stop(ctx.currentTime + 0.12);
+        osc.stop(audioCtx.currentTime + 0.12);
       } catch (e) {}
     }
 
     async function togglePower() {
-      getAudioContext();
-
       if (!isPoweredOn) {
         powerBtn.innerText = "CONNECTING...";
         powerBtn.disabled = true;
         log("Accessing microphone...");
 
         try {
-          localStream = await navigator.mediaDevices.getUserMedia({
+          rawMicStream = await navigator.mediaDevices.getUserMedia({
             audio: {
               echoCancellation: true,
               noiseSuppression: true,
@@ -209,10 +220,9 @@
             video: false
           });
 
-          localStream.getAudioTracks().forEach(track => {
-            track.enabled = false;
-          });
-          log("Microphone initialized (Standby).");
+          // Build continuous gain pipeline
+          initAudioPipeline(rawMicStream);
+          log("Audio pipeline locked (RX).");
 
           peer = new Peer(myId, {
             debug: 1,
@@ -242,7 +252,7 @@
 
           peer.on("call", (call) => {
             log("Inbound call from: " + call.peer);
-            call.answer(localStream);
+            call.answer(outboundStream);
             attachAudioStream(call);
           });
 
@@ -264,9 +274,13 @@
       } else {
         if (syncInterval) clearInterval(syncInterval);
         if (eventSource) eventSource.close();
-        if (localStream) {
-          localStream.getTracks().forEach(track => track.stop());
-          localStream = null;
+        if (rawMicStream) {
+          rawMicStream.getTracks().forEach(track => track.stop());
+          rawMicStream = null;
+        }
+        if (audioCtx) {
+          audioCtx.close();
+          audioCtx = null;
         }
         if (peer) peer.destroy();
         audioContainer.innerHTML = "";
@@ -300,10 +314,10 @@
         if (playPromise !== undefined) {
           playPromise
             .then(() => {
-              log("Audio playing for " + call.peer);
+              log("Live RX link: " + call.peer);
             })
-            .catch(e => {
-              log("Autoplay blocked. Tap screen.");
+            .catch(() => {
+              log("Audio blocked. Tap anywhere.");
               const unlock = () => {
                 audio.play();
                 document.removeEventListener("click", unlock);
@@ -330,8 +344,8 @@
         delete activeCalls[call.peer];
       });
 
-      call.on("error", (err) => {
-        log("Call err with " + call.peer);
+      call.on("error", () => {
+        log("Call err: " + call.peer);
       });
     }
 
@@ -355,7 +369,7 @@
           if (message.id && message.id !== myId && message.action === "join") {
             if (!activeCalls[message.id] && myId > message.id) {
               log("Calling peer: " + message.id);
-              const call = peer.call(message.id, localStream);
+              const call = peer.call(message.id, outboundStream);
               if (call) attachAudioStream(call);
             }
           }
@@ -372,33 +386,34 @@
     }
 
     function startTransmit() {
-      if (!isPoweredOn || isTransmitting || !localStream) return;
+      if (!isPoweredOn || isTransmitting || !pttGainNode || !audioCtx) return;
       isTransmitting = true;
-      getAudioContext();
+      if (audioCtx.state === "suspended") audioCtx.resume();
+      
       playChirp();
       
       pttBtn.classList.add("active");
       statusBadge.innerText = "TRANSMITTING (TX)";
       statusBadge.className = "status-badge tx";
 
-      localStream.getAudioTracks().forEach(track => {
-        track.enabled = true;
-      });
-      log("TX Live (Mic Active)");
+      // Ramp gain up smoothly to avoid clicking
+      pttGainNode.gain.cancelScheduledValues(audioCtx.currentTime);
+      pttGainNode.gain.setTargetAtTime(1.0, audioCtx.currentTime, 0.02);
+      log("TX Active (Audio Live)");
     }
 
     function stopTransmit() {
-      if (!isTransmitting || !localStream) return;
+      if (!isTransmitting || !pttGainNode || !audioCtx) return;
       isTransmitting = false;
       
       pttBtn.classList.remove("active");
       statusBadge.innerText = "RX STANDBY";
       statusBadge.className = "status-badge rx";
 
-      localStream.getAudioTracks().forEach(track => {
-        track.enabled = false;
-      });
-      log("RX Standby (Mic Muted)");
+      // Ramp gain back to 0
+      pttGainNode.gain.cancelScheduledValues(audioCtx.currentTime);
+      pttGainNode.gain.setTargetAtTime(0, audioCtx.currentTime, 0.02);
+      log("RX Standby (Muted)");
     }
 
     powerBtn.addEventListener("click", togglePower);
