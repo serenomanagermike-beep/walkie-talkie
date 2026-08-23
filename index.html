@@ -22,8 +22,9 @@
     * { box-sizing: border-box; user-select: none; -webkit-user-select: none; margin: 0; padding: 0; }
     
     body {
-      background: linear-gradient(180deg, rgba(8, 47, 73, 0.82) 0%, rgba(12, 74, 110, 0.88) 100%),
-                  url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1000&q=80') center/cover no-repeat;
+      background: linear-gradient(180deg, rgba(8, 47, 73, 0.25) 0%, rgba(12, 74, 110, 0.35) 100%),
+                  url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=85') center/cover no-repeat;
+      background-attachment: fixed;
       color: #f8fafc;
       font-family: 'Inter', -apple-system, sans-serif;
       display: flex;
@@ -46,24 +47,25 @@
       font-size: 1.55rem;
       letter-spacing: 4px;
       font-weight: 800;
-      color: #38bdf8;
-      text-shadow: 0 0 16px rgba(56, 189, 248, 0.6);
+      color: #ffffff;
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8), 0 0 16px rgba(56, 189, 248, 0.8);
     }
     .header .tagline {
       font-family: 'Chakra Petch', sans-serif;
       font-size: 0.7rem;
-      color: #7dd3fc;
+      color: #fef08a;
       letter-spacing: 2.5px;
       text-transform: uppercase;
       font-weight: 700;
       margin-top: 2px;
+      text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
     }
 
     /* Screen Glass Panel */
     .screen {
-      background: rgba(8, 47, 73, 0.75);
-      border: 1.5px solid rgba(56, 189, 248, 0.35);
-      box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.4), 0 8px 30px rgba(0, 0, 0, 0.4);
+      background: rgba(8, 47, 73, 0.85);
+      border: 1.5px solid rgba(56, 189, 248, 0.45);
+      box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.5), 0 10px 30px rgba(0, 0, 0, 0.6);
       backdrop-filter: blur(14px);
       -webkit-backdrop-filter: blur(14px);
       border-radius: 18px;
@@ -91,7 +93,7 @@
       font-weight: 700;
       font-size: 0.75rem;
       letter-spacing: 1px;
-      background: rgba(15, 23, 42, 0.6);
+      background: rgba(15, 23, 42, 0.7);
       color: #94a3b8;
       border: 1px solid rgba(255, 255, 255, 0.15);
       transition: all 0.2s ease;
@@ -126,11 +128,12 @@
       font-size: 0.78rem;
       font-weight: 700;
       color: #fef08a;
-      background: rgba(15, 23, 42, 0.6);
-      border: 1px solid rgba(254, 240, 138, 0.3);
+      background: rgba(15, 23, 42, 0.75);
+      border: 1px solid rgba(254, 240, 138, 0.4);
       padding: 5px 10px;
       border-radius: 10px;
       letter-spacing: 1px;
+      text-shadow: 0 1px 4px rgba(0,0,0,0.6);
     }
 
     .contacts-label {
@@ -145,6 +148,7 @@
       display: flex;
       justify-content: space-between;
       padding: 0 4px;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.8);
     }
 
     /* Beachy / Oceanic Tabs */
@@ -155,9 +159,9 @@
       margin-bottom: 10px;
     }
     .contact-btn {
-      background: linear-gradient(180deg, rgba(14, 116, 144, 0.7) 0%, rgba(21, 94, 117, 0.85) 100%);
+      background: linear-gradient(180deg, rgba(14, 116, 144, 0.85) 0%, rgba(21, 94, 117, 0.95) 100%);
       color: #e0f2fe;
-      border: 1px solid rgba(56, 189, 248, 0.35);
+      border: 1px solid rgba(56, 189, 248, 0.4);
       padding: 10px 8px;
       border-radius: 10px;
       font-family: 'Chakra Petch', sans-serif;
@@ -168,14 +172,14 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3);
+      box-shadow: 0 3px 6px rgba(0, 0, 0, 0.35);
       transition: all 0.15s ease;
     }
     .contact-btn .indicator {
       width: 8px;
       height: 8px;
       border-radius: 50%;
-      background: rgba(255, 255, 255, 0.25);
+      background: rgba(255, 255, 255, 0.3);
     }
     .contact-btn:active {
       transform: scale(0.98);
@@ -198,7 +202,7 @@
       font-weight: 800;
       font-size: 0.85rem;
       padding: 11px 12px;
-      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.4);
+      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.5);
     }
     .contact-btn.talkall .indicator {
       background: #fef08a;
@@ -208,10 +212,10 @@
     .meter-container {
       width: 100%;
       height: 7px;
-      background: rgba(15, 23, 42, 0.8);
+      background: rgba(15, 23, 42, 0.85);
       border-radius: 4px;
       overflow: hidden;
-      border: 1px solid rgba(56, 189, 248, 0.3);
+      border: 1px solid rgba(56, 189, 248, 0.35);
     }
     .meter-bar {
       width: 0%;
@@ -238,7 +242,7 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6), 0 0 20px rgba(56, 189, 248, 0.4);
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.65), 0 0 25px rgba(56, 189, 248, 0.5);
       cursor: pointer;
       touch-action: none;
       transition: all 0.12s ease;
@@ -248,7 +252,7 @@
       width: 82px;
       height: 82px;
       fill: #ffffff;
-      filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4));
+      filter: drop-shadow(0 4px 8px rgba(0,0,0,0.5));
       transition: transform 0.1s ease;
       pointer-events: none;
     }
@@ -259,13 +263,13 @@
       letter-spacing: 1px;
       color: #fef08a;
       margin-top: 2px;
-      text-shadow: 0 2px 4px rgba(0,0,0,0.6);
+      text-shadow: 0 2px 4px rgba(0,0,0,0.7);
       pointer-events: none;
     }
     .ptt-btn.active {
       border-color: #ef4444;
       background: radial-gradient(circle at 35% 35%, #ef4444 0%, #991b1b 100%);
-      box-shadow: 0 0 40px rgba(239, 68, 68, 0.85);
+      box-shadow: 0 0 45px rgba(239, 68, 68, 0.9);
       transform: scale(0.95);
     }
     .ptt-btn.active svg {
@@ -290,23 +294,23 @@
       width: 100%;
       max-width: 380px;
       cursor: pointer;
-      box-shadow: 0 4px 16px rgba(16, 185, 129, 0.4);
+      box-shadow: 0 4px 16px rgba(16, 185, 129, 0.5);
       transition: all 0.15s ease;
     }
     .power-btn:active { transform: scale(0.98); }
     .power-btn.off {
       background: linear-gradient(180deg, #ef4444 0%, #b91c1c 100%);
       border-color: #f87171;
-      box-shadow: 0 4px 16px rgba(239, 68, 68, 0.4);
+      box-shadow: 0 4px 16px rgba(239, 68, 68, 0.5);
     }
 
     .log-box {
       width: 100%;
       max-width: 380px;
       height: 50px;
-      background: rgba(8, 47, 73, 0.8);
-      border: 1px solid rgba(56, 189, 248, 0.3);
-      backdrop-filter: blur(8px);
+      background: rgba(8, 47, 73, 0.88);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      backdrop-filter: blur(10px);
       border-radius: 8px;
       font-family: ui-monospace, monospace;
       font-size: 0.68rem;
@@ -548,6 +552,8 @@
 
     function connectBroker() {
       const connectionClientId = `fr-${myId}-${Math.floor(1000 + Math.random() * 9000)}`;
+      
+      // High-speed US HiveMQ Gateway cluster with keepalive
       mqttClient = new Paho.MQTT.Client("broker.hivemq.com", 8884, connectionClientId);
 
       mqttClient.onConnectionLost = (responseObject) => {
@@ -580,6 +586,7 @@
           mqttClient.subscribe("friendradio/channel/talkall");
           mqttClient.subscribe(`friendradio/direct/${myId}`);
 
+          // Active background ping keep-alive
           if (pingInterval) clearInterval(pingInterval);
           pingInterval = setInterval(() => {
             if (mqttClient && mqttClient.isConnected()) {
@@ -636,6 +643,7 @@
         if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = "";
       }
 
+      // Ultra-lightweight 12 kbps Opus stream for minimal latency
       const options = mimeType ? { mimeType, audioBitsPerSecond: 12000 } : { audioBitsPerSecond: 12000 };
       mediaRecorder = new MediaRecorder(micStream, options);
 
