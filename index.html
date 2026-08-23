@@ -12,7 +12,7 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="theme-color" content="#090d16" />
+  <meta name="theme-color" content="#0a0f1d" />
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
 
@@ -20,15 +20,15 @@
     * { box-sizing: border-box; user-select: none; -webkit-user-select: none; margin: 0; padding: 0; }
     
     body {
-      background: radial-gradient(circle at top, #161f30 0%, #090d16 100%);
-      color: #e6edf3;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: linear-gradient(180deg, #0f172a 0%, #020617 100%);
+      color: #f8fafc;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: space-between;
       height: 100dvh;
-      padding: 12px;
+      padding: 14px 16px;
       overflow: hidden;
     }
 
@@ -39,130 +39,161 @@
       padding-top: 2px;
     }
     .header h1 {
-      font-size: 1.3rem;
-      letter-spacing: 3px;
-      font-weight: 800;
+      font-size: 1.35rem;
+      letter-spacing: 4px;
+      font-weight: 900;
       color: #38bdf8;
-      text-shadow: 0 0 12px rgba(56, 189, 248, 0.4);
+      text-shadow: 0 0 14px rgba(56, 189, 248, 0.45);
     }
     .header .tagline {
-      font-size: 0.68rem;
-      color: #64748b;
-      letter-spacing: 1.5px;
+      font-size: 0.65rem;
+      color: #94a3b8;
+      letter-spacing: 2px;
       text-transform: uppercase;
-      font-weight: 600;
+      font-weight: 700;
+      margin-top: 2px;
     }
 
     .screen {
-      background: #0b1120;
-      border: 2px solid #1e293b;
-      box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.8), 0 4px 16px rgba(0, 0, 0, 0.4);
-      border-radius: 12px;
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(56, 189, 248, 0.2);
+      box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.6), 0 8px 24px rgba(0, 0, 0, 0.4);
+      backdrop-filter: blur(12px);
+      border-radius: 16px;
       width: 100%;
       max-width: 380px;
-      padding: 10px 12px;
+      padding: 12px;
       text-align: center;
+    }
+
+    .status-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      padding: 0 2px;
     }
 
     .status-badge {
       display: inline-block;
-      padding: 4px 14px;
+      padding: 5px 14px;
       border-radius: 20px;
       font-weight: 800;
-      font-size: 0.8rem;
+      font-size: 0.75rem;
       letter-spacing: 1px;
-      margin-bottom: 6px;
       background: #1e293b;
       color: #94a3b8;
-      border: 1px solid rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.08);
       transition: all 0.2s ease;
     }
     .status-badge.tx {
-      background: #ef4444;
+      background: #dc2626;
       color: #ffffff;
-      box-shadow: 0 0 14px rgba(239, 68, 68, 0.6);
-      border-color: #f87171;
+      box-shadow: 0 0 16px rgba(220, 38, 38, 0.7);
+      border-color: #ef4444;
     }
     .status-badge.rx {
-      background: #10b981;
+      background: #16a34a;
       color: #ffffff;
-      box-shadow: 0 0 14px rgba(16, 185, 129, 0.6);
+      box-shadow: 0 0 16px rgba(22, 163, 74, 0.7);
       animation: pulse 0.6s infinite alternate;
-      border-color: #34d399;
+      border-color: #4ade80;
     }
     .status-badge.online {
       background: #0284c7;
       color: #ffffff;
-      box-shadow: 0 0 10px rgba(2, 132, 199, 0.4);
+      box-shadow: 0 0 12px rgba(2, 132, 199, 0.4);
       border-color: #38bdf8;
     }
 
     @keyframes pulse {
-      from { opacity: 0.7; transform: scale(0.98); }
+      from { opacity: 0.75; transform: scale(0.98); }
       to { opacity: 1; transform: scale(1.02); }
     }
 
-    .user-tag {
-      font-size: 0.8rem;
+    .user-pill {
+      font-size: 0.75rem;
       font-weight: 800;
       color: #38bdf8;
       background: #0f172a;
-      border: 1px solid #1e293b;
-      border-radius: 6px;
-      padding: 4px;
-      margin-bottom: 8px;
+      border: 1px solid #334155;
+      padding: 4px 10px;
+      border-radius: 20px;
+      letter-spacing: 0.5px;
     }
 
     .contacts-label {
-      font-size: 0.68rem;
+      font-size: 0.65rem;
       color: #64748b;
-      letter-spacing: 1px;
+      letter-spacing: 1.5px;
       text-transform: uppercase;
-      margin-bottom: 4px;
+      margin-bottom: 6px;
       text-align: left;
-      font-weight: bold;
+      font-weight: 800;
+      display: flex;
+      justify-content: space-between;
     }
+
+    /* Modern Contacts Grid */
     .contacts-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: repeat(2, 1fr);
       gap: 6px;
-      margin-bottom: 8px;
+      margin-bottom: 10px;
     }
     .contact-btn {
-      background: #0f172a;
+      background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
       color: #cbd5e1;
       border: 1px solid #334155;
-      padding: 7px 6px;
-      border-radius: 8px;
-      font-size: 0.78rem;
+      padding: 8px 10px;
+      border-radius: 10px;
+      font-size: 0.75rem;
       font-weight: 700;
       cursor: pointer;
       display: flex;
       align-items: center;
-      justify-content: center;
-      gap: 5px;
+      justify-content: space-between;
       transition: all 0.15s ease;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+    .contact-btn .indicator {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #475569;
+      box-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
     }
     .contact-btn.active {
-      background: #0284c7;
+      background: linear-gradient(180deg, #0284c7 0%, #0369a1 100%);
       color: #ffffff;
       border-color: #38bdf8;
-      box-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.45);
+    }
+    .contact-btn.active .indicator {
+      background: #38bdf8;
+      box-shadow: 0 0 8px #38bdf8;
     }
     .contact-btn.talkall {
       grid-column: span 2;
-      background: #1e293b;
+      background: linear-gradient(180deg, #334155 0%, #1e293b 100%);
       border-color: #475569;
+      font-weight: 800;
+      font-size: 0.8rem;
     }
     .contact-btn.talkall.active {
-      background: #2563eb;
+      background: linear-gradient(180deg, #2563eb 0%, #1d4ed8 100%);
       border-color: #60a5fa;
+      box-shadow: 0 0 14px rgba(37, 99, 235, 0.5);
+    }
+    .contact-btn.talkall.active .indicator {
+      background: #93c5fd;
+      box-shadow: 0 0 8px #93c5fd;
     }
 
     .meter-container {
       width: 100%;
       height: 8px;
-      background: #0f172a;
+      background: #020617;
       border-radius: 4px;
       overflow: hidden;
       border: 1px solid #1e293b;
@@ -174,44 +205,45 @@
       transition: width 0.05s ease;
     }
 
+    /* Tactical PTT Button */
     .ptt-container {
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      margin: 6px 0;
+      margin: 4px 0;
     }
     .ptt-btn {
       width: 155px;
       height: 155px;
       border-radius: 50%;
-      border: 7px solid #1e293b;
+      border: 8px solid #1e293b;
       background: radial-gradient(circle at 35% 35%, #334155 0%, #0f172a 100%);
       color: #94a3b8;
-      font-size: 1.3rem;
+      font-size: 1.35rem;
       font-weight: 900;
       letter-spacing: 2px;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.6), inset 0 2px 6px rgba(255, 255, 255, 0.1);
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.7), inset 0 2px 6px rgba(255, 255, 255, 0.12);
       cursor: pointer;
       touch-action: none;
       transition: all 0.1s ease;
     }
     .ptt-btn span {
-      font-size: 0.7rem;
-      font-weight: 600;
+      font-size: 0.68rem;
+      font-weight: 700;
       letter-spacing: 1px;
       color: #64748b;
-      margin-top: 2px;
+      margin-top: 3px;
     }
     .ptt-btn.active {
       border-color: #ef4444;
-      background: radial-gradient(circle at 35% 35%, #ef4444 0%, #b91c1c 100%);
+      background: radial-gradient(circle at 35% 35%, #ef4444 0%, #991b1b 100%);
       color: #ffffff;
-      box-shadow: 0 0 30px rgba(239, 68, 68, 0.7), inset 0 2px 6px rgba(255, 255, 255, 0.2);
+      box-shadow: 0 0 35px rgba(239, 68, 68, 0.75), inset 0 2px 6px rgba(255, 255, 255, 0.25);
       transform: scale(0.96);
     }
     .ptt-btn.active span {
@@ -222,7 +254,7 @@
       background: linear-gradient(180deg, #10b981 0%, #059669 100%);
       color: #ffffff;
       border: 1px solid #34d399;
-      border-radius: 8px;
+      border-radius: 10px;
       padding: 12px;
       font-size: 0.9rem;
       font-weight: 800;
@@ -233,9 +265,7 @@
       box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
       transition: all 0.15s ease;
     }
-    .power-btn:active {
-      transform: scale(0.98);
-    }
+    .power-btn:active { transform: scale(0.98); }
     .power-btn.off {
       background: linear-gradient(180deg, #ef4444 0%, #b91c1c 100%);
       border-color: #f87171;
@@ -245,12 +275,12 @@
     .log-box {
       width: 100%;
       max-width: 380px;
-      height: 65px;
-      background: #050811;
+      height: 60px;
+      background: #020617;
       border: 1px solid #1e293b;
-      border-radius: 6px;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-      font-size: 0.7rem;
+      border-radius: 8px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.68rem;
       color: #38bdf8;
       padding: 6px 8px;
       overflow-y: auto;
@@ -267,18 +297,45 @@
   </div>
 
   <div class="screen">
-    <div id="statusBadge" class="status-badge">RADIO OFF</div>
-    
-    <div id="userTag" class="user-tag">RADIO ID: LOCKING...</div>
+    <div class="status-row">
+      <div id="statusBadge" class="status-badge">RADIO OFF</div>
+      <div id="userTag" class="user-pill">USER: LOCKING...</div>
+    </div>
 
-    <div class="contacts-label">Direct Calling Target:</div>
+    <div class="contacts-label">
+      <span>Channels & Direct Call</span>
+      <span id="targetModeLabel" style="color: #38bdf8;">BROADCAST</span>
+    </div>
+
     <div class="contacts-grid">
-      <button class="contact-btn talkall active" data-target="talkall">📢 Talk All (Broadcast)</button>
-      <button class="contact-btn" data-target="jim">California Jim</button>
-      <button class="contact-btn" data-target="edd">Edd</button>
-      <button class="contact-btn" data-target="matt">Minnesota Matt</button>
-      <button class="contact-btn" data-target="work">Work Test Phone</button>
-      <button class="contact-btn" data-target="mike">Mike</button>
+      <button class="contact-btn talkall active" data-target="talkall">
+        <span>📢 Talk All (Broadcast)</span>
+        <span class="indicator"></span>
+      </button>
+      <button class="contact-btn" data-target="jim">
+        <span>California Jim</span>
+        <span class="indicator"></span>
+      </button>
+      <button class="contact-btn" data-target="edd">
+        <span>Edd</span>
+        <span class="indicator"></span>
+      </button>
+      <button class="contact-btn" data-target="matt">
+        <span>Minnesota Matt</span>
+        <span class="indicator"></span>
+      </button>
+      <button class="contact-btn" data-target="davey">
+        <span>Davey</span>
+        <span class="indicator"></span>
+      </button>
+      <button class="contact-btn" data-target="mikey">
+        <span>Mikey</span>
+        <span class="indicator"></span>
+      </button>
+      <button class="contact-btn" data-target="work">
+        <span>Work Test Phone</span>
+        <span class="indicator"></span>
+      </button>
     </div>
 
     <div class="meter-container">
@@ -302,11 +359,11 @@
       "jim": "California Jim",
       "edd": "Edd",
       "matt": "Minnesota Matt",
-      "work": "Work Test Phone",
-      "mike": "Mike"
+      "davey": "Davey",
+      "mikey": "Mikey",
+      "work": "Work Test Phone"
     };
 
-    // Read identity from URL, fallback to stored device ID, or default to work
     const urlParams = new URLSearchParams(window.location.search);
     const urlUser = urlParams.get("user");
     
@@ -316,7 +373,7 @@
     }
 
     const myDisplayName = userMap[myId] || "Authorized User";
-    document.getElementById("userTag").innerText = `📻 USER: ${myDisplayName.toUpperCase()}`;
+    document.getElementById("userTag").innerText = `📻 ${myDisplayName.toUpperCase()}`;
 
     let selectedTarget = "talkall";
     let mqttClient = null;
@@ -334,12 +391,12 @@
     const pttBtn = document.getElementById("pttButton");
     const statusBadge = document.getElementById("statusBadge");
     const pttTargetLabel = document.getElementById("pttTargetLabel");
+    const targetModeLabel = document.getElementById("targetModeLabel");
     const logBox = document.getElementById("logBox");
     const meterBar = document.getElementById("meterBar");
     const contactBtns = document.querySelectorAll(".contact-btn");
 
     contactBtns.forEach(btn => {
-      // Hide own name from target list
       if (btn.getAttribute("data-target") === myId) {
         btn.style.display = "none";
       }
@@ -351,10 +408,13 @@
 
         if (selectedTarget === "talkall") {
           pttTargetLabel.innerText = "TALK ALL";
+          targetModeLabel.innerText = "BROADCAST";
           log("Target: Broadcast to All");
         } else {
-          pttTargetLabel.innerText = btn.innerText.toUpperCase();
-          log(`Target: Direct -> ${btn.innerText}`);
+          const contactName = userMap[selectedTarget] || selectedTarget;
+          pttTargetLabel.innerText = contactName.toUpperCase();
+          targetModeLabel.innerText = "DIRECT";
+          log(`Target: Direct -> ${contactName}`);
         }
       });
     });
@@ -472,7 +532,7 @@
 
               mqttClient.subscribe("friendradio/channel/talkall");
               mqttClient.subscribe(`friendradio/direct/${myId}`);
-              log(`Listening on ALL & private to ${myId}`);
+              log(`Monitoring ALL & direct to ${myId}`);
             },
             onFailure: (err) => {
               log("Connection failed: " + err.errorMessage);
