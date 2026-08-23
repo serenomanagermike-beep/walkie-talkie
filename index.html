@@ -2,422 +2,143 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-  <title>Direct Connect Walkie-Talkie</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mic Hardware Diagnostic</title>
   <style>
-    * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
     body {
-      margin: 0;
-      background-color: #0d1117;
+      background: #0d1117;
       color: #e6edf3;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: space-between;
-      height: 100dvh;
-      padding: 16px;
-    }
-    .header h1 { margin: 0; font-size: 1.3rem; letter-spacing: 2px; color: #58a6ff; text-align: center; }
-    
-    .screen {
-      background-color: #161b22;
-      border: 2px solid #30363d;
-      border-radius: 12px;
-      width: 100%;
-      max-width: 360px;
-      padding: 12px 16px;
+      font-family: monospace;
+      padding: 20px;
       text-align: center;
     }
-    .status-badge {
-      display: inline-block;
-      padding: 6px 14px;
-      border-radius: 20px;
-      font-weight: bold;
-      font-size: 0.85rem;
-      margin-bottom: 8px;
-      background: #21262d;
-      color: #8b949e;
-    }
-    .status-badge.tx { background: #da3633; color: #fff; }
-    .status-badge.rx { background: #238636; color: #fff; }
-
-    .channel-select {
-      background: #0d1117;
-      color: #58a6ff;
-      border: 1px solid #30363d;
-      padding: 8px 12px;
+    button {
+      background: #238636;
+      color: white;
+      border: none;
+      padding: 16px 32px;
+      font-size: 1.1rem;
       border-radius: 8px;
-      font-size: 0.95rem;
-      width: 100%;
       font-weight: bold;
-      outline: none;
-      margin-bottom: 8px;
+      cursor: pointer;
+      margin-bottom: 20px;
     }
-
-    .meter-container {
+    #meter {
       width: 100%;
-      height: 12px;
-      background: #0d1117;
+      height: 30px;
+      background: #21262d;
       border-radius: 6px;
       overflow: hidden;
-      border: 1px solid #30363d;
-      margin-top: 4px;
+      margin-bottom: 15px;
     }
-    .meter-bar {
+    #meterFill {
       width: 0%;
       height: 100%;
       background: #3fb950;
-      transition: width 0.05s ease;
+      transition: width 0.05s linear;
     }
-
-    .ptt-container {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      margin: 10px 0;
-    }
-    .ptt-btn {
-      width: 160px;
-      height: 160px;
-      border-radius: 50%;
-      border: 6px solid #30363d;
-      background: radial-gradient(circle, #21262d 0%, #161b22 100%);
-      color: #8b949e;
-      font-size: 1.3rem;
-      font-weight: bold;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
-      cursor: pointer;
-      touch-action: none;
-      transition: all 0.1s ease;
-    }
-    .ptt-btn.active {
-      border-color: #f85149;
-      background: radial-gradient(circle, #da3633 0%, #b62324 100%);
-      color: #ffffff;
-      box-shadow: 0 0 30px rgba(218, 54, 51, 0.6);
-      transform: scale(0.96);
-    }
-
-    .power-btn {
-      background-color: #238636;
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      padding: 12px;
-      font-size: 0.95rem;
-      font-weight: bold;
-      width: 100%;
-      max-width: 360px;
-      cursor: pointer;
-    }
-    .power-btn.off { background-color: #da3633; }
-
-    .log-box {
-      width: 100%;
-      max-width: 360px;
-      height: 80px;
+    #log {
       background: #000;
-      border: 1px solid #30363d;
+      color: #58a6ff;
+      padding: 12px;
       border-radius: 6px;
-      font-family: monospace;
-      font-size: 0.72rem;
-      color: #3fb950;
-      padding: 6px;
-      overflow-y: auto;
       text-align: left;
+      height: 160px;
+      overflow-y: auto;
+      font-size: 0.85rem;
     }
   </style>
 </head>
 <body>
 
-  <div class="header">
-    <h1>DIRECT CONNECT</h1>
+  <h2>HARDWARE MIC TEST</h2>
+  <button id="testBtn">TEST MICROPHONE</button>
+
+  <div id="meter">
+    <div id="meterFill"></div>
   </div>
 
-  <div class="screen">
-    <div id="statusBadge" class="status-badge">RADIO OFF</div>
-    <select id="channelSelect" class="channel-select">
-      <option value="room-alpha-direct">CHANNEL 1</option>
-      <option value="room-bravo-direct">CHANNEL 2</option>
-      <option value="room-charlie-direct">CHANNEL 3</option>
-    </select>
-    <div class="meter-container">
-      <div id="meterBar" class="meter-bar"></div>
-    </div>
-  </div>
-
-  <div class="ptt-container">
-    <div id="pttButton" class="ptt-btn">PTT</div>
-  </div>
-
-  <button id="powerBtn" class="power-btn">POWER ON RADIO</button>
-  
-  <div id="logBox" class="log-box">System ready. Tap Power On.</div>
-
-  <audio id="remoteAudioPlayer" autoplay playsinline></audio>
+  <div id="log">> Tap TEST MICROPHONE to inspect hardware...</div>
 
   <script>
-    const myId = "ptt-" + Math.floor(Math.random() * 899999 + 100000);
-    let peer = null;
-    let localStream = null;
-    let activeCall = null;
-    let isPoweredOn = false;
-    let isTransmitting = false;
-    let syncInterval = null;
-    let eventSource = null;
-    
-    let audioCtx = null;
-    let analyser = null;
-    let animId = null;
-
-    const powerBtn = document.getElementById("powerBtn");
-    const pttBtn = document.getElementById("pttButton");
-    const statusBadge = document.getElementById("statusBadge");
-    const channelSelect = document.getElementById("channelSelect");
-    const logBox = document.getElementById("logBox");
-    const meterBar = document.getElementById("meterBar");
-    const remoteAudioPlayer = document.getElementById("remoteAudioPlayer");
+    const btn = document.getElementById('testBtn');
+    const meterFill = document.getElementById('meterFill');
+    const logBox = document.getElementById('log');
 
     function log(msg) {
       logBox.innerHTML = `> ${msg}<br>` + logBox.innerHTML;
     }
 
-    async function ensureAudioContext() {
-      if (!audioCtx) {
-        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-        audioCtx = new AudioContextClass();
-      }
-      if (audioCtx.state === "suspended") {
-        await audioCtx.resume();
-      }
-    }
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      btn.innerText = "TESTING...";
+      log("Checking browser mediaDevices...");
 
-    function playChirp() {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        log("FATAL: getUserMedia not supported in this browser context.");
+        return;
+      }
+
       try {
-        if (!audioCtx) return;
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        osc.type = "sine";
-        osc.frequency.setValueAtTime(1800, audioCtx.currentTime);
-        osc.frequency.setValueAtTime(2400, audioCtx.currentTime + 0.05);
-        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
-        gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.12);
-        osc.start();
-        osc.stop(audioCtx.currentTime + 0.12);
-      } catch (e) {}
-    }
-
-    function startLiveAudioMeter(stream) {
-      const source = audioCtx.createMediaStreamSource(stream);
-      analyser = audioCtx.createAnalyser();
-      analyser.fftSize = 256;
-      source.connect(analyser);
-
-      const bufferLength = analyser.frequencyBinCount;
-      const dataArray = new Uint8Array(bufferLength);
-
-      function updateMeter() {
-        if (!isPoweredOn) return;
-        analyser.getByteFrequencyData(dataArray);
-
-        let sum = 0;
-        for (let i = 0; i < bufferLength; i++) {
-          sum += dataArray[i];
-        }
-        const average = sum / bufferLength;
-        const percentage = Math.min(100, Math.round((average / 128) * 100));
-
-        if (isTransmitting) {
-          meterBar.style.width = percentage + "%";
-          meterBar.style.backgroundColor = "#da3633";
-        } else {
-          // In RX mode show small green ambient tick
-          meterBar.style.width = Math.min(20, percentage / 2) + "%";
-          meterBar.style.backgroundColor = "#238636";
+        log("Requesting plain unconstrained mic stream...");
+        // Bare-metal audio request - zero filters/processing
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        
+        const audioTracks = stream.getAudioTracks();
+        if (audioTracks.length === 0) {
+          log("ERROR: Stream returned with 0 audio tracks.");
+          return;
         }
 
-        animId = requestAnimationFrame(updateMeter);
-      }
-      updateMeter();
-    }
+        const track = audioTracks[0];
+        log(`Track Label: ${track.label}`);
+        log(`Track ReadyState: ${track.readyState}`);
+        log(`Track Muted Flag: ${track.muted}`);
 
-    async function togglePower() {
-      await ensureAudioContext();
-      remoteAudioPlayer.play().catch(() => {});
-
-      if (!isPoweredOn) {
-        powerBtn.innerText = "CONNECTING...";
-        powerBtn.disabled = true;
-        log("Requesting mic access...");
-
-        try {
-          // Standard audio capture - keep track enabled
-          localStream = await navigator.mediaDevices.getUserMedia({
-            audio: {
-              echoCancellation: true,
-              noiseSuppression: false,
-              autoGainControl: true
-            },
-            video: false
-          });
-
-          log("Mic granted. Initializing meter...");
-          startLiveAudioMeter(localStream);
-
-          peer = new Peer(myId, {
-            debug: 1,
-            config: {
-              iceServers: [
-                { urls: "stun:stun.l.google.com:19302" },
-                { urls: "stun:stun1.l.google.com:19302" },
-                { urls: "stun:stun.cloudflare.com:3478" }
-              ],
-              iceCandidatePoolSize: 10
-            }
-          });
-
-          peer.on("open", (id) => {
-            isPoweredOn = true;
-            powerBtn.innerText = "POWER OFF";
-            powerBtn.className = "power-btn off";
-            powerBtn.disabled = false;
-            channelSelect.disabled = true;
-            statusBadge.innerText = "RX STANDBY";
-            statusBadge.className = "status-badge rx";
-            log("Online ID: " + id);
-
-            joinChannelMesh();
-          });
-
-          peer.on("call", (call) => {
-            log("Incoming call: " + call.peer);
-            call.answer(localStream);
-            attachStream(call);
-          });
-
-          peer.on("error", (err) => {
-            log("Peer error: " + err.type);
-          });
-
-        } catch (err) {
-          alert("Microphone error: " + err.message);
-          powerBtn.innerText = "POWER ON RADIO";
-          powerBtn.disabled = false;
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        const ctx = new AudioCtx();
+        if (ctx.state === 'suspended') {
+          await ctx.resume();
         }
-      } else {
-        if (syncInterval) clearInterval(syncInterval);
-        if (eventSource) eventSource.close();
-        if (animId) cancelAnimationFrame(animId);
-        if (localStream) {
-          localStream.getTracks().forEach(t => t.stop());
-          localStream = null;
-        }
-        if (peer) peer.destroy();
-        remoteAudioPlayer.srcObject = null;
-        activeCall = null;
-        isPoweredOn = false;
-        powerBtn.innerText = "POWER ON RADIO";
-        powerBtn.className = "power-btn";
-        channelSelect.disabled = false;
-        statusBadge.innerText = "RADIO OFF";
-        statusBadge.className = "status-badge";
-        meterBar.style.width = "0%";
-        log("Radio powered down.");
-      }
-    }
+        log(`AudioContext State: ${ctx.state}, SampleRate: ${ctx.sampleRate}Hz`);
 
-    function attachStream(call) {
-      activeCall = call;
+        const source = ctx.createMediaStreamSource(stream);
+        const analyser = ctx.createAnalyser();
+        analyser.fftSize = 128;
+        source.connect(analyser);
 
-      call.on("stream", (remoteStream) => {
-        log("Audio stream attached!");
-        remoteAudioPlayer.srcObject = remoteStream;
-        remoteAudioPlayer.volume = 1.0;
-        remoteAudioPlayer.play().catch(e => {
-          log("Tap screen to unmute playback");
-        });
-      });
+        const dataArray = new Uint8Array(analyser.frequencyBinCount);
 
-      call.on("close", () => {
-        log("Connection closed.");
-        remoteAudioPlayer.srcObject = null;
-        activeCall = null;
-      });
-    }
-
-    function joinChannelMesh() {
-      const room = channelSelect.value;
-      const syncUrl = `https://ntfy.sh/directconnect-${room}`;
-
-      fetch(`${syncUrl}/publish`, {
-        method: "POST",
-        body: JSON.stringify({ action: "join", id: myId })
-      }).catch(() => {});
-
-      if (eventSource) eventSource.close();
-      eventSource = new EventSource(`${syncUrl}/sse`);
-      
-      eventSource.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          const message = JSON.parse(data.message);
-          
-          if (message.id && message.id !== myId && message.action === "join") {
-            if (!activeCall && myId > message.id) {
-              log("Calling peer: " + message.id);
-              const call = peer.call(message.id, localStream);
-              if (call) attachStream(call);
-            }
+        function draw() {
+          analyser.getByteFrequencyData(dataArray);
+          let sum = 0;
+          for (let i = 0; i < dataArray.length; i++) {
+            sum += dataArray[i];
           }
-        } catch (e) {}
-      };
+          let avg = sum / dataArray.length;
+          let pct = Math.min(100, Math.round((avg / 128) * 100));
 
-      syncInterval = setInterval(() => {
-        if (!isPoweredOn) return;
-        fetch(`${syncUrl}/publish`, {
-          method: "POST",
-          body: JSON.stringify({ action: "join", id: myId })
-        }).catch(() => {});
-      }, 8000);
-    }
+          meterFill.style.width = pct + "%";
+          if (pct > 5) {
+            meterFill.style.background = "#3fb950";
+          } else {
+            meterFill.style.background = "#da3633";
+          }
 
-    async function startTransmit() {
-      if (!isPoweredOn || isTransmitting) return;
-      isTransmitting = true;
-      await ensureAudioContext();
-      playChirp();
-      
-      pttBtn.classList.add("active");
-      statusBadge.innerText = "TRANSMITTING (TX)";
-      statusBadge.className = "status-badge tx";
-      log("TX Live - Speak Now");
-    }
+          requestAnimationFrame(draw);
+        }
 
-    function stopTransmit() {
-      if (!isTransmitting) return;
-      isTransmitting = false;
-      
-      pttBtn.classList.remove("active");
-      statusBadge.innerText = "RX STANDBY";
-      statusBadge.className = "status-badge rx";
-      log("RX Standby");
-    }
+        draw();
+        btn.innerText = "MIC ACTIVE";
+        btn.style.background = "#8957e5";
+        log("Pipeline running. Speak into mic now!");
 
-    powerBtn.addEventListener("click", togglePower);
-
-    pttBtn.addEventListener("touchstart", (e) => { e.preventDefault(); startTransmit(); });
-    pttBtn.addEventListener("touchend", (e) => { e.preventDefault(); stopTransmit(); });
-
-    pttBtn.addEventListener("mousedown", startTransmit);
-    pttBtn.addEventListener("mouseup", stopTransmit);
+      } catch (err) {
+        log(`MIC ACCESS FAILED: ${err.name} - ${err.message}`);
+        btn.disabled = false;
+        btn.innerText = "TEST MICROPHONE";
+      }
+    });
   </script>
 </body>
 </html>
