@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-  <title>Nextel PTT Walkie-Talkie</title>
-  <!-- Agora Web SDK 4.x -->
-  <script src="https://download.agora.io/sdk/release/AgoraRTC_N-4.20.0.js"></script>
+  <title>Direct Connect Walkie-Talkie</title>
+  <!-- PeerJS Open WebRTC (Zero Tokens / Zero Expiring Keys) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js"></script>
   <style>
     * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
     body {
@@ -18,7 +18,7 @@
       align-items: center;
       justify-content: space-between;
       height: 100dvh;
-      padding: 20px 16px;
+      padding: 24px 16px;
     }
     .header { text-align: center; }
     .header h1 { margin: 0; font-size: 1.4rem; letter-spacing: 2px; color: #58a6ff; }
@@ -71,7 +71,7 @@
       border: 6px solid #30363d;
       background: radial-gradient(circle, #21262d 0%, #161b22 100%);
       color: #8b949e;
-      font-size: 1.3rem;
+      font-size: 1.4rem;
       font-weight: bold;
       display: flex;
       align-items: center;
@@ -112,10 +112,11 @@
 
   <div class="screen">
     <div id="statusBadge" class="status-badge">RADIO OFF</div>
-    <select id="channelSelect" class="channel-select" disabled>
+    <select id="channelSelect" class="channel-select">
       <option value="channel-1">CHANNEL 1</option>
       <option value="channel-2">CHANNEL 2</option>
       <option value="channel-3">CHANNEL 3</option>
+      <option value="channel-4">CHANNEL 4</option>
     </select>
   </div>
 
@@ -126,11 +127,10 @@
   <button id="powerBtn" class="power-btn">POWER ON RADIO</button>
 
   <script>
-    // --- INSERT YOUR AGORA APP ID HERE ---
-    const AGORA_APP_ID = "6fec62364d8f440abdb8706f4613cfea";
-
-    let client = null;
-    let localAudioTrack = null;
+    let peer = null;
+    let localStream = null;
+    let connections = [];
+    let calls = [];
     let isPoweredOn = false;
     let isTransmitting = false;
 
@@ -139,7 +139,7 @@
     const statusBadge = document.getElementById("statusBadge");
     const channelSelect = document.getElementById("channelSelect");
 
-    // Audio context for the classic Nextel chirp
+    // Nextel chirp synthesizer
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     function playChirp() {
       try {
@@ -164,77 +164,99 @@
         powerBtn.innerText = "CONNECTING...";
         powerBtn.disabled = true;
 
-        client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
+        try {
+          // Get microphone
+          localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+          // Mute mic by default
+          localStream.getAudioTracks().forEach(t => t.enabled = false);
 
-        // Remote user audio handler
-        client.on("user-published", async (user, mediaType) => {
-          await client.subscribe(user, mediaType);
-          if (mediaType === "audio") {
-            user.audioTrack.play();
-            statusBadge.innerText = "INCOMING RX...";
-            statusBadge.className = "status-badge rx";
-          }
-        });
+          const myId = "ptt-" + channelSelect.value + "-" + Math.random().toString(36).substring(2, 7);
+          peer = new Peer(myId);
 
-        client.on("user-unpublished", () => {
-          if (!isTransmitting) {
+          peer.on("open", () => {
+            isPoweredOn = true;
+            powerBtn.innerText = "POWER OFF";
+            powerBtn.className = "power-btn off";
+            powerBtn.disabled = false;
+            channelSelect.disabled = true;
             statusBadge.innerText = "RX STANDBY";
             statusBadge.className = "status-badge rx";
-          }
-        });
+          });
 
-        try {
-          // Join channel
-          await client.join(AGORA_APP_ID, channelSelect.value, null, null);
-          
-          // Create mic track (muted by default)
-          localAudioTrack = await AgoraRTC.createMicrophoneAudioTrack();
-          await localAudioTrack.setEnabled(false);
-          await client.publish([localAudioTrack]);
+          // Handle incoming audio call
+          peer.on("call", (call) => {
+            call.answer(localStream);
+            call.on("stream", (remoteStream) => {
+              const audio = new Audio();
+              audio.srcObject = remoteStream;
+              audio.play();
+              statusBadge.innerText = "INCOMING RX...";
+              statusBadge.className = "status-badge rx";
+            });
+            call.on("close", () => {
+              if (!isTransmitting) {
+                statusBadge.innerText = "RX STANDBY";
+                statusBadge.className = "status-badge rx";
+              }
+            });
+          });
 
-          isPoweredOn = true;
-          powerBtn.innerText = "POWER OFF";
-          powerBtn.className = "power-btn off";
-          powerBtn.disabled = false;
-          channelSelect.disabled = false;
-          statusBadge.innerText = "RX STANDBY";
-          statusBadge.className = "status-badge rx";
+          // Handle incoming data channel
+          peer.on("connection", (conn) => {
+            conn.on("data", (data) => {
+              if (data === "TX_START") {
+                statusBadge.innerText = "INCOMING RX...";
+                statusBadge.className = "status-badge rx";
+              } else if (data === "TX_STOP") {
+                if (!isTransmitting) {
+                  statusBadge.innerText = "RX STANDBY";
+                  statusBadge.className = "status-badge rx";
+                }
+              }
+            });
+          });
+
         } catch (err) {
-          alert("Error connecting: " + err.message);
+          alert("Microphone access is required: " + err.message);
           powerBtn.innerText = "POWER ON RADIO";
           powerBtn.disabled = false;
         }
       } else {
         // Disconnect
-        if (localAudioTrack) {
-          localAudioTrack.close();
-          localAudioTrack = null;
+        if (localStream) {
+          localStream.getTracks().forEach(track => track.stop());
+          localStream = null;
         }
-        if (client) await client.leave();
+        if (peer) peer.destroy();
         isPoweredOn = false;
         powerBtn.innerText = "POWER ON RADIO";
         powerBtn.className = "power-btn";
-        channelSelect.disabled = true;
+        channelSelect.disabled = false;
         statusBadge.innerText = "RADIO OFF";
         statusBadge.className = "status-badge";
       }
     }
 
-    async function startTransmit() {
-      if (!isPoweredOn || isTransmitting || !localAudioTrack) return;
+    function startTransmit() {
+      if (!isPoweredOn || isTransmitting || !localStream) return;
       isTransmitting = true;
       playChirp();
       pttBtn.classList.add("active");
       statusBadge.innerText = "TRANSMITTING (TX)";
       statusBadge.className = "status-badge tx";
-      await localAudioTrack.setEnabled(true);
+
+      // Unmute microphone
+      localStream.getAudioTracks().forEach(t => t.enabled = true);
     }
 
-    async function stopTransmit() {
-      if (!isTransmitting || !localAudioTrack) return;
+    function stopTransmit() {
+      if (!isTransmitting || !localStream) return;
       isTransmitting = false;
       pttBtn.classList.remove("active");
-      await localAudioTrack.setEnabled(false);
+
+      // Mute microphone
+      localStream.getAudioTracks().forEach(t => t.enabled = false);
+
       statusBadge.innerText = "RX STANDBY";
       statusBadge.className = "status-badge rx";
     }
