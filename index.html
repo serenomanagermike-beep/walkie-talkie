@@ -523,7 +523,6 @@
   
   <div id="logBox" class="log-box">Tap Power On to connect.</div>
 
-  <!-- Hidden Silent Keep-Alive Audio Element -->
   <audio id="keepAliveAudio" loop playsinline src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAP8A/w=="></audio>
 
   <div id="radarModal" class="modal-overlay">
@@ -560,6 +559,11 @@
 
     const myDisplayName = userMap[myId] || "Authorized User";
     document.getElementById("userTag").innerText = `🌴 ${myDisplayName.toUpperCase()}`;
+
+    // Register Background Service Worker
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').catch(() => {});
+    }
 
     let selectedTarget = "talkall";
     let mqttClient = null;
@@ -662,6 +666,20 @@
       } catch (err) {}
     }
 
+    // High-priority Lock Screen Push Alert via ntfy.sh
+    function sendPushAlert(target, title, message) {
+      const topic = target === "talkall" ? "fr_ping_channel_talkall_global" : `fr_ping_${target}_direct`;
+      fetch(`https://ntfy.sh/${topic}`, {
+        method: 'POST',
+        headers: {
+          'Title': title,
+          'Priority': 'urgent',
+          'Tags': 'radio,loudspeaker'
+        },
+        body: message
+      }).catch(() => {});
+    }
+
     function playChirp() {
       try {
         const ctx = getAudioContext();
@@ -683,12 +701,10 @@
       const ctx = getAudioContext();
 
       if (!isPoweredOn) {
-        // Request background push notification permission
         if ('Notification' in window && Notification.permission !== 'granted') {
           Notification.requestPermission().catch(() => {});
         }
 
-        // Start Silent In-Audible Audio Loop to prevent lock-screen sleep
         try {
           keepAliveAudio.play().catch(() => {});
         } catch(e) {}
@@ -821,6 +837,9 @@
     }
 
     function sendDirectTextMessage(target, text) {
+      // Fire Push Alert to Wake Up Locked Devices
+      sendPushAlert(target, `💬 ${myDisplayName}`, text);
+
       const topic = target === "talkall" ? "friendradio/channel/talkall" : `friendradio/direct/${target}`;
       const msgPayload = new Paho.MQTT.Message(JSON.stringify({
         type: "TEXT_MESSAGE",
@@ -840,6 +859,9 @@
       audioChunks = [];
       getAudioContext();
       playChirp();
+
+      // Fire Push Alert to Wake Up Locked Devices for Voice
+      sendPushAlert(selectedTarget, `🚨 FRIEND RADIO CALL`, `${myDisplayName} is transmitting now!`);
 
       pttBtn.classList.add("active");
       statusBadge.innerText = "TRANSMITTING (TX)";
@@ -911,7 +933,6 @@
           const directTag = payload.target === "talkall" ? "📢 [ALL]" : "🔒 [DIRECT]";
           log(`${directTag} 💬 ${sender}: "${payload.text}"`);
 
-          // Background Lock-Screen Notification Trigger
           if ('Notification' in window && Notification.permission === 'granted' && document.hidden) {
             new Notification(`💬 ${sender}`, {
               body: payload.text,
