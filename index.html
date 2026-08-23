@@ -196,7 +196,6 @@
     const meterBar = document.getElementById("meterBar");
     const speakerOutput = document.getElementById("speakerOutput");
 
-    // Auto-select Unit 2 if on mobile screen
     if (/Android|iPhone|iPad/i.test(navigator.userAgent)) {
       unitSelect.value = "unit2";
     }
@@ -235,8 +234,6 @@
 
     async function togglePower() {
       const ctx = getAudioContext();
-      speakerOutput.muted = true;
-      speakerOutput.play().catch(() => {});
 
       if (!isPoweredOn) {
         powerBtn.innerText = "CONNECTING...";
@@ -254,6 +251,9 @@
         try {
           micStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
           
+          // Start with mic track unmuted so the WebRTC connection negotiates active audio
+          micStream.getAudioTracks().forEach(t => t.enabled = false);
+
           const source = ctx.createMediaStreamSource(micStream);
           micAnalyser = ctx.createAnalyser();
           micAnalyser.fftSize = 64;
@@ -299,7 +299,6 @@
             statusBadge.className = "status-badge standby";
             log("Online: " + id);
 
-            // Unit 1 calls Unit 2; Unit 2 waits to answer
             if (myUnit === "unit1") {
               attemptConnect();
               reconnectInterval = setInterval(() => {
@@ -312,20 +311,20 @@
 
           // Inbound Voice Call
           peer.on("call", (call) => {
-            log("Audio call answered.");
+            log("Voice call connected.");
             activeMediaCall = call;
             call.answer(micStream);
             
             call.on("stream", (remoteStream) => {
-              log("Voice channel locked.");
+              log("Audio link active.");
               speakerOutput.srcObject = remoteStream;
-              speakerOutput.muted = true;
+              speakerOutput.muted = false;
               speakerOutput.volume = 1.0;
               speakerOutput.play().catch(() => {});
             });
 
             call.on("close", () => {
-              log("Audio link disconnected.");
+              log("Voice disconnected.");
               activeMediaCall = null;
             });
           });
@@ -337,9 +336,7 @@
           });
 
           peer.on("error", (err) => {
-            if (err.type === "peer-unavailable") {
-              // Other unit not turned on yet
-            } else {
+            if (err.type !== "peer-unavailable") {
               log("Err: " + err.type);
             }
           });
@@ -373,20 +370,18 @@
     }
 
     function attemptConnect() {
-      if (!isPoweredOn || !peer || peer.destroyed) return;
+      if (!isPoweredOn || !peer || peer.destroyed || (activeDataConn && activeDataConn.open)) return;
       
-      // Connect Data
       const conn = peer.connect(targetPeerId);
       activeDataConn = conn;
       bindDataEvents(conn);
 
-      // Connect Media
       const call = peer.call(targetPeerId, micStream);
       activeMediaCall = call;
       call.on("stream", (remoteStream) => {
-        log("Voice channel locked.");
+        log("Audio link active.");
         speakerOutput.srcObject = remoteStream;
-        speakerOutput.muted = true;
+        speakerOutput.muted = false;
         speakerOutput.volume = 1.0;
         speakerOutput.play().catch(() => {});
       });
@@ -394,19 +389,21 @@
 
     function bindDataEvents(conn) {
       conn.on("open", () => {
-        log("CONNECTED TO " + conn.peer.toUpperCase());
+        if (reconnectInterval) {
+          clearInterval(reconnectInterval);
+          reconnectInterval = null;
+        }
+        log("LINKED TO " + conn.peer.toUpperCase());
         statusBadge.innerText = "READY";
         statusBadge.className = "status-badge rx";
       });
 
       conn.on("data", (data) => {
         if (data === "TX_ON") {
-          speakerOutput.muted = false;
           playChirp();
           statusBadge.innerText = "RECEIVING (RX)";
           statusBadge.className = "status-badge rx";
         } else if (data === "TX_OFF") {
-          speakerOutput.muted = true;
           statusBadge.innerText = "READY";
           statusBadge.className = "status-badge rx";
         }
@@ -420,10 +417,13 @@
     }
 
     function startTransmit() {
-      if (!isPoweredOn || isTransmitting) return;
+      if (!isPoweredOn || isTransmitting || !micStream) return;
       isTransmitting = true;
       getAudioContext();
       playChirp();
+
+      // Enable microphone track so live audio flows through WebRTC
+      micStream.getAudioTracks().forEach(t => t.enabled = true);
 
       pttBtn.classList.add("active");
       statusBadge.innerText = "TRANSMITTING (TX)";
@@ -436,8 +436,11 @@
     }
 
     function stopTransmit() {
-      if (!isTransmitting) return;
+      if (!isTransmitting || !micStream) return;
       isTransmitting = false;
+
+      // Mute microphone track
+      micStream.getAudioTracks().forEach(t => t.enabled = false);
 
       pttBtn.classList.remove("active");
       statusBadge.innerText = (activeDataConn && activeDataConn.open) ? "READY" : "STANDBY";
@@ -452,11 +455,9 @@
 
     powerBtn.addEventListener("click", togglePower);
 
-    // Mobile touch events
     pttBtn.addEventListener("touchstart", (e) => { e.preventDefault(); startTransmit(); });
     pttBtn.addEventListener("touchend", (e) => { e.preventDefault(); stopTransmit(); });
 
-    // Desktop mouse events
     pttBtn.addEventListener("mousedown", startTransmit);
     pttBtn.addEventListener("mouseup", stopTransmit);
   </script>
