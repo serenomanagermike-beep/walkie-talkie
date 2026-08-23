@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Nextel PTT Walkie-Talkie</title>
+  <!-- Agora Web SDK 4.x -->
+  <script src="https://download.agora.io/sdk/release/AgoraRTC_N-4.20.0.js"></script>
+  <style>
+    * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
+    body {
+      margin: 0;
+      background-color: #0d1117;
+      color: #e6edf3;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      height: 100dvh;
+      padding: 20px 16px;
+    }
+    .header { text-align: center; }
+    .header h1 { margin: 0; font-size: 1.4rem; letter-spacing: 2px; color: #58a6ff; }
+    
+    .screen {
+      background-color: #161b22;
+      border: 2px solid #30363d;
+      border-radius: 12px;
+      width: 100%;
+      max-width: 360px;
+      padding: 16px;
+      text-align: center;
+    }
+    .status-badge {
+      display: inline-block;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-weight: bold;
+      font-size: 0.9rem;
+      margin-bottom: 12px;
+      background: #21262d;
+      color: #8b949e;
+    }
+    .status-badge.tx { background: #da3633; color: #fff; }
+    .status-badge.rx { background: #238636; color: #fff; }
+
+    .channel-select {
+      background: #0d1117;
+      color: #58a6ff;
+      border: 1px solid #30363d;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 1rem;
+      width: 100%;
+      font-weight: bold;
+      outline: none;
+    }
+
+    .ptt-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      margin: 20px 0;
+    }
+    .ptt-btn {
+      width: 180px;
+      height: 180px;
+      border-radius: 50%;
+      border: 6px solid #30363d;
+      background: radial-gradient(circle, #21262d 0%, #161b22 100%);
+      color: #8b949e;
+      font-size: 1.3rem;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+      cursor: pointer;
+      touch-action: none;
+      transition: all 0.1s ease;
+    }
+    .ptt-btn.active {
+      border-color: #f85149;
+      background: radial-gradient(circle, #da3633 0%, #b62324 100%);
+      color: #ffffff;
+      box-shadow: 0 0 30px rgba(218, 54, 51, 0.6);
+      transform: scale(0.96);
+    }
+
+    .power-btn {
+      background-color: #238636;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 14px 24px;
+      font-size: 1rem;
+      font-weight: bold;
+      width: 100%;
+      max-width: 360px;
+      cursor: pointer;
+    }
+    .power-btn.off { background-color: #da3633; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>DIRECT CONNECT</h1>
+  </div>
+
+  <div class="screen">
+    <div id="statusBadge" class="status-badge">RADIO OFF</div>
+    <select id="channelSelect" class="channel-select" disabled>
+      <option value="channel-1">CHANNEL 1</option>
+      <option value="channel-2">CHANNEL 2</option>
+      <option value="channel-3">CHANNEL 3</option>
+    </select>
+  </div>
+
+  <div class="ptt-container">
+    <div id="pttButton" class="ptt-btn">PTT</div>
+  </div>
+
+  <button id="powerBtn" class="power-btn">POWER ON RADIO</button>
+
+  <script>
+    // --- INSERT YOUR AGORA APP ID HERE ---
+    const AGORA_APP_ID = "6fec62364d8f440abdb8706f4613cfeaSS";
+
+    let client = null;
+    let localAudioTrack = null;
+    let isPoweredOn = false;
+    let isTransmitting = false;
+
+    const powerBtn = document.getElementById("powerBtn");
+    const pttBtn = document.getElementById("pttButton");
+    const statusBadge = document.getElementById("statusBadge");
+    const channelSelect = document.getElementById("channelSelect");
+
+    // Audio context for the classic Nextel chirp
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playChirp() {
+      try {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(1800, audioCtx.currentTime);
+        osc.frequency.setValueAtTime(2400, audioCtx.currentTime + 0.05);
+        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.12);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.12);
+      } catch (e) {}
+    }
+
+    async function togglePower() {
+      if (audioCtx.state === "suspended") await audioCtx.resume();
+
+      if (!isPoweredOn) {
+        powerBtn.innerText = "CONNECTING...";
+        powerBtn.disabled = true;
+
+        client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
+
+        // Remote user audio handler
+        client.on("user-published", async (user, mediaType) => {
+          await client.subscribe(user, mediaType);
+          if (mediaType === "audio") {
+            user.audioTrack.play();
+            statusBadge.innerText = "INCOMING RX...";
+            statusBadge.className = "status-badge rx";
+          }
+        });
+
+        client.on("user-unpublished", () => {
+          if (!isTransmitting) {
+            statusBadge.innerText = "RX STANDBY";
+            statusBadge.className = "status-badge rx";
+          }
+        });
+
+        try {
+          // Join channel
+          await client.join(AGORA_APP_ID, channelSelect.value, null, null);
+          
+          // Create mic track (muted by default)
+          localAudioTrack = await AgoraRTC.createMicrophoneAudioTrack();
+          await localAudioTrack.setEnabled(false);
+          await client.publish([localAudioTrack]);
+
+          isPoweredOn = true;
+          powerBtn.innerText = "POWER OFF";
+          powerBtn.className = "power-btn off";
+          powerBtn.disabled = false;
+          channelSelect.disabled = false;
+          statusBadge.innerText = "RX STANDBY";
+          statusBadge.className = "status-badge rx";
+        } catch (err) {
+          alert("Error connecting: " + err.message);
+          powerBtn.innerText = "POWER ON RADIO";
+          powerBtn.disabled = false;
+        }
+      } else {
+        // Disconnect
+        if (localAudioTrack) {
+          localAudioTrack.close();
+          localAudioTrack = null;
+        }
+        if (client) await client.leave();
+        isPoweredOn = false;
+        powerBtn.innerText = "POWER ON RADIO";
+        powerBtn.className = "power-btn";
+        channelSelect.disabled = true;
+        statusBadge.innerText = "RADIO OFF";
+        statusBadge.className = "status-badge";
+      }
+    }
+
+    async function startTransmit() {
+      if (!isPoweredOn || isTransmitting || !localAudioTrack) return;
+      isTransmitting = true;
+      playChirp();
+      pttBtn.classList.add("active");
+      statusBadge.innerText = "TRANSMITTING (TX)";
+      statusBadge.className = "status-badge tx";
+      await localAudioTrack.setEnabled(true);
+    }
+
+    async function stopTransmit() {
+      if (!isTransmitting || !localAudioTrack) return;
+      isTransmitting = false;
+      pttBtn.classList.remove("active");
+      await localAudioTrack.setEnabled(false);
+      statusBadge.innerText = "RX STANDBY";
+      statusBadge.className = "status-badge rx";
+    }
+
+    powerBtn.addEventListener("click", togglePower);
+
+    // Touch events for mobile phones
+    pttBtn.addEventListener("touchstart", (e) => { e.preventDefault(); startTransmit(); });
+    pttBtn.addEventListener("touchend", (e) => { e.preventDefault(); stopTransmit(); });
+
+    // Mouse events for desktop/laptop
+    pttBtn.addEventListener("mousedown", startTransmit);
+    pttBtn.addEventListener("mouseup", stopTransmit);
+  </script>
+</body>
+</html>
