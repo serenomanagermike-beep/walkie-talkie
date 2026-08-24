@@ -60,6 +60,30 @@
       text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
     }
 
+    .crew-btn {
+      position: absolute;
+      left: 0;
+      top: 0;
+      background: linear-gradient(180deg, #f97316 0%, #ea580c 100%);
+      color: #ffffff;
+      border: 1px solid #fdba74;
+      border-radius: 8px;
+      padding: 4px 8px;
+      font-family: 'Chakra Petch', sans-serif;
+      font-size: 0.65rem;
+      font-weight: 800;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+      letter-spacing: 0.5px;
+      transition: transform 0.1s ease;
+    }
+    .crew-btn:active {
+      transform: scale(0.95);
+    }
+
     .radar-btn {
       position: absolute;
       right: 0;
@@ -415,6 +439,9 @@
 <body>
 
   <div class="header">
+    <a href="https://m.facebook.com/groups/2098657413766610/" target="_blank" rel="noopener noreferrer" class="crew-btn">
+      🌅 SUNSET CREW
+    </a>
     <h1>FRIEND RADIO</h1>
     <div class="tagline">Direct Connect PTT</div>
     <button id="radarOpenBtn" class="radar-btn">📡 RADAR</button>
