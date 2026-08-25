@@ -2,479 +2,1615 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Friend Radio</title>
-  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Friend Radio Pro</title>
+  
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="theme-color" content="#082f49" />
+
+  <!-- App Icons -->
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="manifest" href="manifest.json">
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
+
   <style>
-    :root {
-      --bg-color: #0f172a;
-      --card-bg: #1e293b;
-      --card-border: #334155;
-      --text-main: #f8fafc;
-      --text-dim: #94a3b8;
-      --accent-green: #22c55e;
-      --accent-red: #ef4444;
-      --accent-purple: #a855f7;
-      --accent-yellow: #eab308;
-    }
+    @import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700;800&family=Inter:wght@500;700;900&display=swap');
 
-    * {
-      box-sizing: border-box;
-      user-select: none;
-      -webkit-user-select: none;
-      margin: 0;
-      padding: 0;
-    }
-
+    * { box-sizing: border-box; user-select: none; -webkit-user-select: none; margin: 0; padding: 0; }
+    
     body {
-      background-color: var(--bg-color);
-      color: var(--text-main);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      min-height: 100vh;
+      background: linear-gradient(180deg, rgba(8, 47, 73, 0.4) 0%, rgba(12, 74, 110, 0.5) 100%),
+                  url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=85') center/cover no-repeat;
+      background-attachment: fixed;
+      color: #f8fafc;
+      font-family: 'Inter', -apple-system, sans-serif;
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 1rem;
+      justify-content: space-between;
+      min-height: 100dvh;
+      padding: 8px 12px;
+      overflow-x: hidden;
+      overflow-y: auto;
     }
 
-    header {
+    .top-bar {
       width: 100%;
-      max-width: 480px;
+      max-width: 400px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding-bottom: 1rem;
-      border-bottom: 1px solid var(--card-border);
-      margin-bottom: 1rem;
+      gap: 6px;
+      margin-bottom: 4px;
     }
 
-    h1 {
-      font-size: 1.25rem;
-      font-weight: 700;
-      letter-spacing: 0.05em;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .badge {
-      font-size: 0.75rem;
-      padding: 0.2rem 0.5rem;
-      border-radius: 9999px;
-      background-color: var(--card-border);
-      color: var(--accent-green);
-    }
-
-    .admin-btn {
-      background-color: var(--accent-purple);
-      color: white;
-      border: none;
-      padding: 0.4rem 0.75rem;
+    .nav-btn {
+      background: linear-gradient(180deg, #0284c7 0%, #0369a1 100%);
+      color: #ffffff;
+      border: 1px solid #38bdf8;
       border-radius: 6px;
-      font-weight: 600;
+      padding: 4px 8px;
+      font-family: 'Chakra Petch', sans-serif;
+      font-size: 0.65rem;
+      font-weight: 800;
       cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      text-decoration: none;
+      letter-spacing: 0.5px;
+    }
+    .nav-btn.crew {
+      background: linear-gradient(180deg, #f97316 0%, #ea580c 100%);
+      border-color: #fdba74;
+    }
+    .nav-btn.admin {
+      background: linear-gradient(180deg, #8b5cf6 0%, #6d28d9 100%);
+      border-color: #c4b5fd;
       display: none;
     }
+    .nav-btn:active { transform: scale(0.95); }
 
-    #alert-banner {
-      display: none;
+    .header-banner {
       width: 100%;
-      max-width: 480px;
-      background-color: var(--accent-yellow);
-      color: #000;
+      max-width: 400px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+    .header-title { text-align: left; }
+    .header-title h1 {
+      font-family: 'Chakra Petch', sans-serif;
+      font-size: 1.35rem;
+      letter-spacing: 2px;
+      font-weight: 800;
+      color: #ffffff;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8), 0 0 12px rgba(56, 189, 248, 0.8);
+      line-height: 1.1;
+    }
+    .header-title .tagline {
+      font-family: 'Chakra Petch', sans-serif;
+      font-size: 0.62rem;
+      color: #fef08a;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
       font-weight: 700;
-      padding: 0.75rem;
+    }
+
+    .beach-widget {
+      background: rgba(15, 23, 42, 0.75);
+      border: 1px solid rgba(254, 240, 138, 0.35);
       border-radius: 8px;
+      padding: 3px 8px;
+      font-family: 'Chakra Petch', sans-serif;
+      font-size: 0.62rem;
+      color: #fef08a;
+      text-align: right;
+      line-height: 1.25;
+    }
+    .beach-widget span { display: block; color: #bae6fd; font-size: 0.58rem; }
+
+    .channel-tabs {
+      width: 100%;
+      max-width: 400px;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 4px;
+      margin-bottom: 6px;
+    }
+    .tab-btn {
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      border-radius: 6px;
+      padding: 5px 2px;
+      font-family: 'Chakra Petch', sans-serif;
+      font-size: 0.65rem;
+      font-weight: 700;
+      color: #94a3b8;
+      cursor: pointer;
       text-align: center;
-      margin-bottom: 1rem;
-      animation: pulse 1s infinite;
+    }
+    .tab-btn.active {
+      background: linear-gradient(180deg, #0284c7 0%, #0369a1 100%);
+      color: #ffffff;
+      border-color: #38bdf8;
+      box-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
+    }
+    .tab-btn.emergency.active {
+      background: linear-gradient(180deg, #ef4444 0%, #b91c1c 100%);
+      border-color: #f87171;
+      box-shadow: 0 0 12px rgba(239, 68, 68, 0.7);
+    }
+
+    .screen {
+      background: rgba(8, 47, 73, 0.88);
+      border: 1.5px solid rgba(56, 189, 248, 0.45);
+      box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.5), 0 10px 30px rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border-radius: 14px;
+      width: 100%;
+      max-width: 400px;
+      padding: 8px 10px;
+      text-align: center;
+      margin-bottom: 6px;
+    }
+
+    .status-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-family: 'Chakra Petch', sans-serif;
+      font-weight: 700;
+      font-size: 0.7rem;
+      letter-spacing: 1px;
+      background: rgba(15, 23, 42, 0.7);
+      color: #94a3b8;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+    .status-badge.tx {
+      background: linear-gradient(180deg, #ef4444 0%, #dc2626 100%);
+      color: #ffffff;
+      box-shadow: 0 0 16px rgba(239, 68, 68, 0.8);
+      border-color: #f87171;
+    }
+    .status-badge.rx {
+      background: linear-gradient(180deg, #10b981 0%, #059669 100%);
+      color: #ffffff;
+      box-shadow: 0 0 16px rgba(16, 185, 129, 0.8);
+      animation: pulse 0.6s infinite alternate;
+      border-color: #34d399;
+    }
+    .status-badge.online {
+      background: linear-gradient(180deg, #0284c7 0%, #0369a1 100%);
+      color: #ffffff;
+      box-shadow: 0 0 12px rgba(2, 132, 199, 0.5);
+      border-color: #38bdf8;
     }
 
     @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.6; }
+      from { opacity: 0.8; transform: scale(0.98); }
+      to { opacity: 1; transform: scale(1.02); }
     }
 
-    #admin-panel {
-      display: none;
-      width: 100%;
-      max-width: 480px;
-      background-color: #2e1065;
-      border: 1px solid var(--accent-purple);
-      border-radius: 8px;
-      padding: 1rem;
-      margin-bottom: 1rem;
-    }
-
-    .admin-actions {
+    .user-pill-group {
       display: flex;
-      gap: 0.5rem;
-      margin-top: 0.75rem;
+      align-items: center;
+      gap: 4px;
     }
-
-    .admin-action-btn {
-      flex: 1;
-      padding: 0.5rem;
-      border: none;
+    .user-pill {
+      font-family: 'Chakra Petch', sans-serif;
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: #fef08a;
+      background: rgba(15, 23, 42, 0.75);
+      border: 1px solid rgba(254, 240, 138, 0.4);
+      padding: 3px 6px;
       border-radius: 6px;
-      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+    .status-select {
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      color: #ffffff;
+      font-family: 'Chakra Petch', sans-serif;
+      font-size: 0.65rem;
+      padding: 2px 4px;
+      border-radius: 6px;
       cursor: pointer;
-      background-color: var(--card-border);
-      color: var(--text-main);
     }
 
-    #peers-container {
-      width: 100%;
-      max-width: 480px;
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
-      flex-grow: 1;
-      margin-bottom: 1.5rem;
-    }
-
-    .user-card {
-      background-color: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 10px;
-      padding: 0.75rem 1rem;
+    /* Volume Boost Controller Row */
+    .vol-control-row {
       display: flex;
       align-items: center;
       justify-content: space-between;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      border-radius: 6px;
+      padding: 2px 8px;
+      margin-bottom: 6px;
+      font-family: 'Chakra Petch', sans-serif;
+      font-size: 0.62rem;
+      color: #bae6fd;
+    }
+    .vol-slider {
+      flex: 1;
+      margin: 0 8px;
+      accent-color: #38bdf8;
+      cursor: pointer;
     }
 
-    .user-info {
+    .contacts-header {
       display: flex;
+      justify-content: space-between;
       align-items: center;
-      gap: 0.75rem;
+      font-family: 'Chakra Petch', sans-serif;
+      font-size: 0.62rem;
+      color: #bae6fd;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+      padding: 0 2px;
+      font-weight: 700;
     }
 
-    .status-dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      background-color: #64748b;
+    .contacts-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 5px;
+      margin-bottom: 6px;
+      max-height: 165px;
+      overflow-y: auto;
+      padding-right: 2px;
     }
-
-    .status-dot.online {
-      background-color: var(--accent-green);
-    }
-
-    .user-actions {
+    .contact-card {
       display: flex;
-      gap: 0.5rem;
+      background: linear-gradient(180deg, rgba(14, 116, 144, 0.85) 0%, rgba(21, 94, 117, 0.95) 100%);
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      border-radius: 7px;
+      overflow: hidden;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.35);
+      position: relative;
     }
-
-    .btn-icon {
-      background: #334155;
+    .contact-btn {
+      flex: 1;
+      background: transparent;
       border: none;
-      color: white;
-      width: 38px;
-      height: 38px;
-      border-radius: 8px;
+      color: #e0f2fe;
+      padding: 5px 6px;
+      font-family: 'Chakra Petch', sans-serif;
+      font-size: 0.68rem;
+      font-weight: 700;
       cursor: pointer;
       display: flex;
       align-items: center;
-      justify-content: center;
-      font-size: 1.1rem;
-      transition: background 0.2s;
+      gap: 5px;
+      text-align: left;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .presence-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #64748b;
+      display: inline-block;
+      flex-shrink: 0;
+    }
+    .presence-dot.online {
+      background: #22c55e;
+      box-shadow: 0 0 6px #22c55e;
+    }
+    .contact-status-tag {
+      font-size: 0.58rem;
+      color: #fef08a;
+      display: block;
+      font-weight: 600;
     }
 
-    .btn-icon:active {
+    .contact-actions {
+      display: flex;
+      border-left: 1px solid rgba(255, 255, 255, 0.15);
+    }
+    .buzz-btn, .msg-btn {
+      background: rgba(0, 0, 0, 0.25);
+      border: none;
+      color: #fef08a;
+      padding: 0 5px;
+      cursor: pointer;
+      font-size: 0.72rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .buzz-btn:active, .msg-btn:active { background: rgba(254, 240, 138, 0.3); }
+    .buzz-btn { border-right: 1px solid rgba(255, 255, 255, 0.1); }
+
+    .contact-card.active {
+      background: linear-gradient(180deg, #0ea5e9 0%, #0284c7 100%);
+      border-color: #7dd3fc;
+      box-shadow: 0 0 10px rgba(56, 189, 248, 0.6);
+    }
+    .contact-card.active .contact-btn { color: #ffffff; }
+
+    .contact-card.talkall {
+      grid-column: span 2;
+      background: linear-gradient(180deg, #0284c7 0%, #0369a1 100%);
+      border-color: #38bdf8;
+    }
+    .contact-card.talkall .contact-btn {
+      font-size: 0.75rem;
+      font-weight: 800;
+      padding: 6px 8px;
+    }
+
+    .meter-container {
+      width: 100%;
+      height: 5px;
+      background: rgba(15, 23, 42, 0.85);
+      border-radius: 4px;
+      overflow: hidden;
+      border: 1px solid rgba(56, 189, 248, 0.35);
+    }
+    .meter-bar {
+      width: 0%;
+      height: 100%;
+      background: #38bdf8;
+      transition: width 0.05s ease;
+    }
+
+    /* Soundboard Quick Response Row */
+    .soundboard-row {
+      width: 100%;
+      max-width: 400px;
+      display: flex;
+      gap: 4px;
+      overflow-x: auto;
+      padding-bottom: 2px;
+      margin-bottom: 4px;
+    }
+    .soundboard-btn {
+      background: rgba(15, 23, 42, 0.75);
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      color: #bae6fd;
+      border-radius: 12px;
+      padding: 3px 8px;
+      font-family: 'Chakra Petch', sans-serif;
+      font-size: 0.62rem;
+      font-weight: 700;
+      white-space: nowrap;
+      cursor: pointer;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+    .soundboard-btn:active {
+      background: #0284c7;
+      color: #ffffff;
       transform: scale(0.95);
     }
 
-    .btn-ping {
-      background: #7c2d12;
-      color: #fdba74;
-    }
-
-    .btn-ping:active {
-      background: #ea580c;
-    }
-
+    /* PTT Area */
     .ptt-container {
-      width: 100%;
-      max-width: 480px;
       display: flex;
+      align-items: center;
       justify-content: center;
-      padding: 1rem 0;
+      gap: 14px;
+      margin: 4px 0;
+      position: relative;
     }
-
-    #ptt-button {
-      width: 160px;
-      height: 160px;
+    .ptt-btn {
+      width: 140px;
+      height: 140px;
       border-radius: 50%;
-      border: 4px solid var(--card-border);
-      background: radial-gradient(circle, #334155 0%, #1e293b 100%);
-      color: var(--text-main);
-      font-size: 1.25rem;
-      font-weight: 800;
-      cursor: pointer;
-      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
-      touch-action: none;
+      border: 5px solid #38bdf8;
+      background: radial-gradient(circle at 35% 35%, #0ea5e9 0%, #0369a1 100%);
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 0.25rem;
-      transition: all 0.15s ease;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.65), 0 0 20px rgba(56, 189, 248, 0.5);
+      cursor: pointer;
+      touch-action: none;
+      transition: all 0.12s ease;
+    }
+    .ptt-btn svg {
+      width: 65px;
+      height: 65px;
+      fill: #ffffff;
+      filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5));
+      pointer-events: none;
+    }
+    .ptt-btn span {
+      font-family: 'Chakra Petch', sans-serif;
+      font-size: 0.68rem;
+      font-weight: 800;
+      letter-spacing: 1px;
+      color: #fef08a;
+      margin-top: 2px;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.7);
+      pointer-events: none;
+      text-align: center;
+      max-width: 115px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .ptt-btn.active {
+      border-color: #ef4444;
+      background: radial-gradient(circle at 35% 35%, #ef4444 0%, #991b1b 100%);
+      box-shadow: 0 0 45px rgba(239, 68, 68, 0.9);
+      transform: scale(0.95);
+    }
+    .ptt-btn.active svg { transform: scale(0.92); fill: #fee2e2; }
+
+    /* Channel Busy Lockout Styling */
+    .ptt-btn.busy-locked {
+      border-color: #f59e0b;
+      background: radial-gradient(circle at 35% 35%, #b45309 0%, #78350f 100%);
+      box-shadow: 0 0 25px rgba(245, 158, 11, 0.7);
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+    .ptt-btn.busy-locked span {
+      color: #fed7aa;
+      font-size: 0.6rem;
     }
 
-    #ptt-button.transmitting {
-      border-color: var(--accent-red);
-      background: radial-gradient(circle, #ef4444 0%, #991b1b 100%);
-      transform: scale(0.96);
-      box-shadow: 0 0 30px rgba(239, 68, 68, 0.6);
+    .side-control-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid #38bdf8;
+      color: #fef08a;
+      font-family: 'Chakra Petch', sans-serif;
+      font-size: 0.6rem;
+      font-weight: 800;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
     }
+    .side-control-btn:active { transform: scale(0.92); }
+    .side-control-btn span { font-size: 0.5rem; color: #bae6fd; }
+
+    .power-btn {
+      background: linear-gradient(180deg, #10b981 0%, #059669 100%);
+      color: #ffffff;
+      border: 1.5px solid #34d399;
+      border-radius: 8px;
+      padding: 10px;
+      font-family: 'Chakra Petch', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 800;
+      letter-spacing: 1.5px;
+      width: 100%;
+      max-width: 400px;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4);
+      transition: all 0.15s ease;
+      margin-bottom: 4px;
+    }
+    .power-btn:active { transform: scale(0.98); }
+    .power-btn.off {
+      background: linear-gradient(180deg, #ef4444 0%, #b91c1c 100%);
+      border-color: #f87171;
+      box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4);
+    }
+
+    .log-box {
+      width: 100%;
+      max-width: 400px;
+      height: 42px;
+      background: rgba(8, 47, 73, 0.9);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      backdrop-filter: blur(10px);
+      border-radius: 6px;
+      font-family: ui-monospace, monospace;
+      font-size: 0.62rem;
+      color: #7dd3fc;
+      padding: 4px 6px;
+      overflow-y: auto;
+      text-align: left;
+      line-height: 1.3;
+    }
+
+    /* Modals */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(6px);
+      z-index: 2000;
+      align-items: center;
+      justify-content: center;
+      padding: 14px;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-card {
+      background: #082f49;
+      border: 2px solid #38bdf8;
+      border-radius: 14px;
+      width: 100%;
+      max-width: 390px;
+      overflow: hidden;
+      box-shadow: 0 0 30px rgba(56, 189, 248, 0.4);
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 12px;
+      background: #0c4a6e;
+      border-bottom: 1px solid #38bdf8;
+    }
+    .modal-header h3 {
+      font-family: 'Chakra Petch', sans-serif;
+      font-size: 0.85rem;
+      color: #fef08a;
+      letter-spacing: 1px;
+    }
+    .close-modal-btn {
+      background: #ef4444;
+      color: #ffffff;
+      border: none;
+      padding: 3px 8px;
+      border-radius: 5px;
+      font-family: 'Chakra Petch', sans-serif;
+      font-weight: 800;
+      font-size: 0.7rem;
+      cursor: pointer;
+    }
+    .modal-body {
+      padding: 12px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    .admin-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      font-family: 'Chakra Petch', sans-serif;
+      font-size: 0.75rem;
+    }
+    .admin-actions { display: flex; gap: 5px; }
+    .admin-btn {
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid #38bdf8;
+      color: #bae6fd;
+      border-radius: 5px;
+      padding: 3px 6px;
+      font-size: 0.65rem;
+      font-family: 'Chakra Petch', sans-serif;
+      cursor: pointer;
+    }
+    .admin-btn.danger { border-color: #f87171; color: #fca5a5; }
   </style>
 </head>
 <body>
 
-  <header>
-    <h1>📻 Friend Radio <span id="my-id-badge" class="badge">Connecting...</span></h1>
-    <button id="admin-toggle-btn" class="admin-btn" onclick="toggleAdminPanel()">⚙️ ADMIN</button>
-  </header>
+  <!-- Top Action Navigation -->
+  <div class="top-bar">
+    <button id="radarOpenBtn" class="nav-btn">📡 RADAR</button>
+    <button id="adminOpenBtn" class="nav-btn admin">⚙️ ADMIN</button>
+    <a href="https://m.facebook.com/groups/2098657413766610/" target="_blank" rel="noopener noreferrer" class="nav-btn crew">
+      🌅 SUNSET CREW
+    </a>
+  </div>
 
-  <div id="alert-banner"></div>
-
-  <!-- Admin Controls Panel -->
-  <div id="admin-panel">
-    <div style="font-weight: 700; font-size: 0.9rem; color: #d8b4fe;">⚙️ Mesh Admin Controls</div>
-    <div class="admin-actions">
-      <button class="admin-action-btn" onclick="sendAdminBroadcast('RESET')">Force Clear Line</button>
-      <button class="admin-action-btn" style="background:#dc2626;" onclick="sendAdminBroadcast('EMERGENCY_SIREN')">Emergency Siren</button>
+  <!-- Header Banner & Beach Widget -->
+  <div class="header-banner">
+    <div class="header-title">
+      <h1>FRIEND RADIO</h1>
+      <div class="tagline">Direct Connect PTT • Live Mesh</div>
+    </div>
+    <div class="beach-widget">
+      <div id="sunsetCountdown">🌅 Sunset: ...</div>
+      <span>🌴 Madeira / St. Pete Beach</span>
     </div>
   </div>
 
-  <!-- User Mesh List -->
-  <div id="peers-container"></div>
+  <!-- Sub-Channels / Groups -->
+  <div class="channel-tabs">
+    <button class="tab-btn active" data-channel="main">🌐 MAIN CREW</button>
+    <button class="tab-btn" data-channel="work">🛠️ WORK / CONDOS</button>
+    <button class="tab-btn emergency" data-channel="emergency">🚨 EMERGENCY</button>
+  </div>
 
-  <!-- PTT Trigger -->
+  <!-- Central Screen -->
+  <div class="screen">
+    <div class="status-row">
+      <div id="statusBadge" class="status-badge">RADIO OFF</div>
+      <div class="user-pill-group">
+        <div id="userTag" class="user-pill">USER: LOCKING...</div>
+        <select id="userStatusSelect" class="status-select">
+          <option value="🏖️ Beach">🏖️ Beach</option>
+          <option value="⚡ Active">⚡ Active</option>
+          <option value="🚗 Driving">🚗 Driving</option>
+          <option value="🛠️ Working">🛠️ Working</option>
+          <option value="🤫 Busy">🤫 Busy</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Volume Booster Gain Slider -->
+    <div class="vol-control-row">
+      <span>🔊 BOOST</span>
+      <input type="range" id="volBoostSlider" class="vol-slider" min="0.5" max="2.0" step="0.1" value="1.0">
+      <span id="volBoostLabel">100%</span>
+    </div>
+
+    <div class="contacts-header">
+      <span>Channels & Direct Contact</span>
+      <span id="targetModeLabel" style="color: #fef08a;">BROADCAST</span>
+    </div>
+
+    <!-- Contact Cards Grid -->
+    <div class="contacts-grid" id="contactsGrid">
+      <div class="contact-card talkall active" data-target="talkall">
+        <button class="contact-btn">
+          <span class="presence-dot online"></span>
+          <span>📢 TALK ALL (BROADCAST)</span>
+        </button>
+        <div class="contact-actions">
+          <button class="buzz-btn" title="Alert All">⚡</button>
+          <button class="msg-btn" title="Broadcast Text">💬</button>
+        </div>
+      </div>
+
+      <div class="contact-card" data-target="jim">
+        <button class="contact-btn">
+          <span class="presence-dot" id="dot-jim"></span>
+          <div>
+            <span>CALIFORNIA JIM</span>
+            <span class="contact-status-tag" id="status-jim">Offline</span>
+          </div>
+        </button>
+        <div class="contact-actions">
+          <button class="buzz-btn" title="Buzz Jim">⚡</button>
+          <button class="msg-btn" title="Message Jim">💬</button>
+        </div>
+      </div>
+
+      <div class="contact-card" data-target="edd">
+        <button class="contact-btn">
+          <span class="presence-dot" id="dot-edd"></span>
+          <div>
+            <span>EDD</span>
+            <span class="contact-status-tag" id="status-edd">Offline</span>
+          </div>
+        </button>
+        <div class="contact-actions">
+          <button class="buzz-btn" title="Buzz Edd">⚡</button>
+          <button class="msg-btn" title="Message Edd">💬</button>
+        </div>
+      </div>
+
+      <div class="contact-card" data-target="matt">
+        <button class="contact-btn">
+          <span class="presence-dot" id="dot-matt"></span>
+          <div>
+            <span>MINNESOTA MATT</span>
+            <span class="contact-status-tag" id="status-matt">Offline</span>
+          </div>
+        </button>
+        <div class="contact-actions">
+          <button class="buzz-btn" title="Buzz Matt">⚡</button>
+          <button class="msg-btn" title="Message Matt">💬</button>
+        </div>
+      </div>
+
+      <div class="contact-card" data-target="davey">
+        <button class="contact-btn">
+          <span class="presence-dot" id="dot-davey"></span>
+          <div>
+            <span>DAVEY</span>
+            <span class="contact-status-tag" id="status-davey">Offline</span>
+          </div>
+        </button>
+        <div class="contact-actions">
+          <button class="buzz-btn" title="Buzz Davey">⚡</button>
+          <button class="msg-btn" title="Message Davey">💬</button>
+        </div>
+      </div>
+
+      <div class="contact-card" data-target="chuckie">
+        <button class="contact-btn">
+          <span class="presence-dot" id="dot-chuckie"></span>
+          <div>
+            <span>CHUCKIE</span>
+            <span class="contact-status-tag" id="status-chuckie">Offline</span>
+          </div>
+        </button>
+        <div class="contact-actions">
+          <button class="buzz-btn" title="Buzz Chuckie">⚡</button>
+          <button class="msg-btn" title="Message Chuckie">💬</button>
+        </div>
+      </div>
+
+      <div class="contact-card" data-target="mikey">
+        <button class="contact-btn">
+          <span class="presence-dot" id="dot-mikey"></span>
+          <div>
+            <span>MIKEY (PERSONAL)</span>
+            <span class="contact-status-tag" id="status-mikey">Offline</span>
+          </div>
+        </button>
+        <div class="contact-actions">
+          <button class="buzz-btn" title="Buzz Mikey">⚡</button>
+          <button class="msg-btn" title="Message Mikey">💬</button>
+        </div>
+      </div>
+
+      <div class="contact-card" data-target="work">
+        <button class="contact-btn">
+          <span class="presence-dot" id="dot-work"></span>
+          <div>
+            <span>WORK PHONE</span>
+            <span class="contact-status-tag" id="status-work">Offline</span>
+          </div>
+        </button>
+        <div class="contact-actions">
+          <button class="buzz-btn" title="Buzz Work">⚡</button>
+          <button class="msg-btn" title="Message Work">💬</button>
+        </div>
+      </div>
+
+      <div class="contact-card" data-target="laptop">
+        <button class="contact-btn">
+          <span class="presence-dot" id="dot-laptop"></span>
+          <div>
+            <span>LAPTOP</span>
+            <span class="contact-status-tag" id="status-laptop">Offline</span>
+          </div>
+        </button>
+        <div class="contact-actions">
+          <button class="buzz-btn" title="Buzz Laptop">⚡</button>
+          <button class="msg-btn" title="Message Laptop">💬</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Audio Meter Bar -->
+    <div class="meter-container">
+      <div id="meterBar" class="meter-bar"></div>
+    </div>
+  </div>
+
+  <!-- Quick Soundboard Buttons -->
+  <div class="soundboard-row">
+    <button class="soundboard-btn" onclick="sendQuickSound('10-4, Copy That!')">📻 10-4 Copy</button>
+    <button class="soundboard-btn" onclick="sendQuickSound('Heading over now!')">🚶 Heading Over</button>
+    <button class="soundboard-btn" onclick="sendQuickSound('At the beach spot!')">🏖️ At Beach</button>
+    <button class="soundboard-btn" onclick="sendQuickSound('Call my cell phone!')">📱 Call My Cell</button>
+  </div>
+
+  <!-- PTT Trigger Area & Quick Controls -->
   <div class="ptt-container">
-    <button id="ptt-button">
-      <span>TALK</span>
-      <span style="font-size: 0.75rem; font-weight: normal; color: var(--text-dim);">PUSH & HOLD</span>
+    <button id="replayBtn" class="side-control-btn" title="Replay Last Transmission">
+      🔁
+      <span>REPLAY</span>
+    </button>
+
+    <div id="pttButton" class="ptt-btn">
+      <svg viewBox="0 0 24 24">
+        <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z"/>
+      </svg>
+      <span id="pttTargetLabel">TALK ALL</span>
+    </div>
+
+    <button id="filterBtn" class="side-control-btn" title="Toggle Coastal Wind Noise Filter">
+      🎙️
+      <span id="filterLabel">EQ: ON</span>
     </button>
   </div>
 
+  <!-- Main Power Button -->
+  <button id="powerBtn" class="power-btn">POWER ON RADIO</button>
+  
+  <!-- Activity Console -->
+  <div id="logBox" class="log-box">Tap Power On to connect to mesh network.</div>
+
+  <audio id="keepAliveAudio" loop playsinline src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAP8A/w=="></audio>
+
+  <!-- Live Radar Modal -->
+  <div id="radarModal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>ST. PETE BEACH LIVE RADAR</h3>
+        <button id="radarCloseBtn" class="close-modal-btn">CLOSE</button>
+      </div>
+      <div style="width: 100%; height: 380px; background: #000;">
+        <iframe id="radarFrame" src="" allowfullscreen style="width:100%; height:100%; border:none;"></iframe>
+      </div>
+    </div>
+  </div>
+
+  <!-- Admin Control Panel Modal -->
+  <div id="adminModal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>⚙️ ADMIN MESH CONTROL</h3>
+        <button id="adminCloseBtn" class="close-modal-btn">CLOSE</button>
+      </div>
+      <div class="modal-body">
+        <div style="display:flex; gap:6px; margin-bottom:12px;">
+          <button id="adminSirenBtn" class="admin-btn danger" style="flex:1; padding:8px;">🚨 ALL-CALL SIREN</button>
+          <button id="adminClearBtn" class="admin-btn" style="flex:1; padding:8px;">⚡ FORCE CLEAR LINE</button>
+        </div>
+        <div style="font-family:'Chakra Petch',sans-serif; font-size:0.7rem; color:#bae6fd; margin-bottom:6px; font-weight:700;">
+          MEMBER VISIBILITY & REMOTE SILENCE
+        </div>
+        <div id="adminUserList"></div>
+      </div>
+    </div>
+  </div>
+
   <script>
-    // Known channel members roster
-    const MESH_ROSTER = ['laptop', 'mikey', 'phone', 'office'];
+    const userMap = {
+      "jim": "California Jim",
+      "edd": "Edd",
+      "matt": "Minnesota Matt",
+      "davey": "Davey",
+      "chuckie": "Chuckie",
+      "mikey": "Mikey (Personal)",
+      "work": "Work Phone",
+      "laptop": "Laptop"
+    };
 
-    // Identity setup from URL (?user=mikey or ?user=laptop)
     const urlParams = new URLSearchParams(window.location.search);
-    const userId = (urlParams.get('user') || 'user-' + Math.floor(Math.random() * 1000)).toLowerCase();
-    const isAdmin = ['laptop', 'mikey'].includes(userId);
+    const urlUser = urlParams.get("user");
+    
+    let myId = urlUser || localStorage.getItem("fr_my_id") || "laptop";
+    if (urlUser) localStorage.setItem("fr_my_id", myId);
 
-    document.getElementById('my-id-badge').textContent = userId;
+    const myDisplayName = userMap[myId] || "Authorized User";
+    document.getElementById("userTag").innerText = `🌴 ${myDisplayName.toUpperCase()}`;
+
+    // Admin Verification (laptop or mikey get master admin controls)
+    const isAdmin = (myId === "laptop" || myId === "mikey");
     if (isAdmin) {
-      document.getElementById('admin-toggle-btn').style.display = 'block';
+      document.getElementById("adminOpenBtn").style.display = "inline-flex";
     }
 
-    // Audio Alert Clip
-    const screamAudio = new Audio('beavis-alert.mp3');
-    screamAudio.preload = 'auto';
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').catch(() => {});
+    }
 
-    window.addEventListener('pointerdown', () => {
-      screamAudio.load();
-    }, { once: true });
+    // State Variables
+    let selectedTarget = "talkall";
+    let activeChannel = "main";
+    let mqttClient = null;
+    let micStream = null;
+    let mediaRecorder = null;
+    let audioChunks = [];
+    let audioContext = null;
+    let micAnalyser = null;
+    let micSourceNode = null;
+    let voiceFilterNode = null;
+    let masterGainNode = null;
+    let meterInterval = null;
+    let heartbeatInterval = null;
+    let isPoweredOn = false;
+    let isTransmitting = false;
+    let isFilterActive = true;
+    let isChannelLocked = false;
+    let wakeLock = null;
+    let lastVoiceBase64 = null;
+    const presenceTimers = {};
+    const mutedUsers = new Set();
+    const hiddenUsers = new Set();
 
-    function playBeavisScream() {
-      try {
-        screamAudio.currentTime = 0;
-        screamAudio.volume = 1.0;
-        const p = screamAudio.play();
-        if (p) p.catch(() => {});
-        if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 400]);
-      } catch (err) {
-        console.error(err);
+    // Elements
+    const powerBtn = document.getElementById("powerBtn");
+    const pttBtn = document.getElementById("pttButton");
+    const statusBadge = document.getElementById("statusBadge");
+    const pttTargetLabel = document.getElementById("pttTargetLabel");
+    const targetModeLabel = document.getElementById("targetModeLabel");
+    const logBox = document.getElementById("logBox");
+    const meterBar = document.getElementById("meterBar");
+    const contactCards = document.querySelectorAll(".contact-card");
+    const userStatusSelect = document.getElementById("userStatusSelect");
+    const keepAliveAudio = document.getElementById("keepAliveAudio");
+    const replayBtn = document.getElementById("replayBtn");
+    const filterBtn = document.getElementById("filterBtn");
+    const filterLabel = document.getElementById("filterLabel");
+    const volBoostSlider = document.getElementById("volBoostSlider");
+    const volBoostLabel = document.getElementById("volBoostLabel");
+
+    // Modal Elements
+    const radarOpenBtn = document.getElementById("radarOpenBtn");
+    const radarCloseBtn = document.getElementById("radarCloseBtn");
+    const radarModal = document.getElementById("radarModal");
+    const radarFrame = document.getElementById("radarFrame");
+    const adminOpenBtn = document.getElementById("adminOpenBtn");
+    const adminCloseBtn = document.getElementById("adminCloseBtn");
+    const adminModal = document.getElementById("adminModal");
+    const adminUserList = document.getElementById("adminUserList");
+
+    // Haptic Vibration Helper
+    function triggerHaptic(pattern = [40]) {
+      if ("vibrate" in navigator) {
+        try { navigator.vibrate(pattern); } catch (e) {}
       }
     }
 
-    function flashAlertBanner(text) {
-      const banner = document.getElementById('alert-banner');
-      banner.textContent = text;
-      banner.style.display = 'block';
-      setTimeout(() => { banner.style.display = 'none'; }, 5000);
-    }
-
-    // WebRTC Peer Configuration
-    const peer = new Peer('fr-radio-' + userId, { debug: 1 });
-    const connections = {};
-    const calls = {};
-    let localStream = null;
-
-    navigator.mediaDevices.getUserMedia({ audio: true, video: false })
-      .then(stream => {
-        localStream = stream;
-        localStream.getAudioTracks().forEach(t => t.enabled = false);
-      })
-      .catch(err => console.warn("Mic access pending user permission:", err));
-
-    peer.on('open', () => {
-      renderUserList();
-      startMeshDiscovery();
-    });
-
-    peer.on('connection', conn => {
-      setupConnectionHandlers(conn);
-    });
-
-    peer.on('call', call => {
-      call.answer(localStream);
-      call.on('stream', remoteStream => {
-        playIncomingAudio(call.peer, remoteStream);
-      });
-      calls[call.peer] = call;
-    });
-
-    // Auto-connect to other roster devices
-    function startMeshDiscovery() {
-      setInterval(() => {
-        MESH_ROSTER.forEach(targetUser => {
-          if (targetUser === userId) return;
-          const targetPeerId = 'fr-radio-' + targetUser;
-
-          if (!connections[targetPeerId] || !connections[targetPeerId].open) {
-            const conn = peer.connect(targetPeerId, { reliable: true });
-            setupConnectionHandlers(conn);
-
-            if (localStream && !calls[targetPeerId]) {
-              const call = peer.call(targetPeerId, localStream);
-              if (call) {
-                call.on('stream', remoteStream => {
-                  playIncomingAudio(targetPeerId, remoteStream);
-                });
-                calls[targetPeerId] = call;
-              }
-            }
-          }
-        });
-      }, 3000);
-    }
-
-    function setupConnectionHandlers(conn) {
-      connections[conn.peer] = conn;
-
-      conn.on('open', () => {
-        renderUserList();
-      });
-
-      conn.on('data', data => {
-        handleIncomingData(data);
-      });
-
-      conn.on('close', () => {
-        delete connections[conn.peer];
-        renderUserList();
-      });
-
-      conn.on('error', () => {
-        delete connections[conn.peer];
-        renderUserList();
-      });
-    }
-
-    function handleIncomingData(data) {
-      const msg = typeof data === 'string' ? JSON.parse(data) : data;
-
-      if (msg.type === 'DIRECT_PING') {
-        playBeavisScream();
-        flashAlertBanner(`⚡ Incoming Alert from ${msg.from}!`);
-      } else if (msg.type === 'EMERGENCY_SIREN') {
-        playBeavisScream();
-        flashAlertBanner(`🚨 EMERGENCY SIREN FROM ${msg.from}`);
-      } else if (msg.type === 'RESET') {
-        location.reload();
-      }
-    }
-
-    function sendDirectPing(targetUsername) {
-      const targetPeerId = 'fr-radio-' + targetUsername;
-      const payload = JSON.stringify({ type: 'DIRECT_PING', from: userId });
-
-      if (connections[targetPeerId] && connections[targetPeerId].open) {
-        connections[targetPeerId].send(payload);
-        flashAlertBanner(`⚡ Alert sent to ${targetUsername}`);
+    // Sunset Countdown Calculator for Madeira Beach / St Pete Beach
+    function updateSunsetCountdown() {
+      const now = new Date();
+      const sunset = new Date();
+      sunset.setHours(19, 58, 0, 0);
+      
+      let diff = sunset - now;
+      if (diff > 0) {
+        const hours = Math.floor(diff / (1000 * 60 * 60));
+        const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        document.getElementById("sunsetCountdown").innerText = `🌅 Sunset: ${hours}h ${mins}m`;
       } else {
-        const conn = peer.connect(targetPeerId);
-        conn.on('open', () => {
-          conn.send(payload);
-          flashAlertBanner(`⚡ Alert sent to ${targetUsername}`);
-        });
+        document.getElementById("sunsetCountdown").innerText = `🌅 Sunset: In Golden Hour`;
       }
     }
+    updateSunsetCountdown();
+    setInterval(updateSunsetCountdown, 60000);
 
-    function playIncomingAudio(peerId, stream) {
-      let audioEl = document.getElementById(`audio-${peerId}`);
-      if (!audioEl) {
-        audioEl = document.createElement('audio');
-        audioEl.id = `audio-${peerId}`;
-        audioEl.autoplay = true;
-        document.body.appendChild(audioEl);
+    // Volume Gain Slider Controller
+    volBoostSlider.addEventListener("input", (e) => {
+      const val = parseFloat(e.target.value);
+      volBoostLabel.innerText = Math.round(val * 100) + "%";
+      if (masterGainNode) {
+        masterGainNode.gain.value = val;
       }
-      audioEl.srcObject = stream;
-    }
+    });
 
-    // PTT Trigger Controls
-    const pttBtn = document.getElementById('ptt-button');
-
-    function startTransmitting() {
-      if (!localStream) return;
-      localStream.getAudioTracks().forEach(t => t.enabled = true);
-      pttBtn.classList.add('transmitting');
-    }
-
-    function stopTransmitting() {
-      if (!localStream) return;
-      localStream.getAudioTracks().forEach(t => t.enabled = false);
-      pttBtn.classList.remove('transmitting');
-    }
-
-    pttBtn.addEventListener('pointerdown', startTransmitting);
-    pttBtn.addEventListener('pointerup', stopTransmitting);
-    pttBtn.addEventListener('pointerleave', stopTransmitting);
-
-    // Admin Panel Controls
-    function toggleAdminPanel() {
-      const panel = document.getElementById('admin-panel');
-      panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
-    }
-
-    function sendAdminBroadcast(type) {
-      const payload = JSON.stringify({ type: type, from: userId });
-      Object.values(connections).forEach(conn => {
-        if (conn && conn.open) conn.send(payload);
+    // Channel Switching
+    document.querySelectorAll(".tab-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        activeChannel = btn.getAttribute("data-channel");
+        log(`Switched to [${btn.innerText.trim()}] Channel`);
+        if (mqttClient && mqttClient.isConnected()) {
+          mqttClient.subscribe(`friendradio/channel/${activeChannel}`);
+        }
       });
-      if (type === 'EMERGENCY_SIREN') playBeavisScream();
+    });
+
+    // Radar Modal
+    radarOpenBtn.addEventListener("click", () => {
+      radarFrame.src = "https://www.rainviewer.com/map.html?loc=27.7253,-82.7412,10&oCS=1&c=1&o=83&lm=1&layer=radar&sm=1&sn=1";
+      radarModal.classList.add("open");
+    });
+    radarCloseBtn.addEventListener("click", () => {
+      radarModal.classList.remove("open");
+      radarFrame.src = "";
+    });
+
+    // Admin Modal & Dynamic Management
+    if (isAdmin) {
+      adminOpenBtn.addEventListener("click", () => {
+        adminUserList.innerHTML = "";
+        Object.keys(userMap).forEach(uid => {
+          if (uid === myId) return;
+          const row = document.createElement("div");
+          row.className = "admin-row";
+          row.innerHTML = `
+            <span>${userMap[uid]}</span>
+            <div class="admin-actions">
+              <button class="admin-btn" onclick="toggleHideUser('${uid}', this)">${hiddenUsers.has(uid) ? 'Show' : 'Hide'}</button>
+              <button class="admin-btn danger" onclick="toggleSilenceUser('${uid}', this)">${mutedUsers.has(uid) ? 'Unmute' : 'Mute'}</button>
+            </div>
+          `;
+          adminUserList.appendChild(row);
+        });
+        adminModal.classList.add("open");
+      });
+
+      adminCloseBtn.addEventListener("click", () => adminModal.classList.remove("open"));
+
+      document.getElementById("adminSirenBtn").addEventListener("click", () => {
+        if (!isPoweredOn) return alert("Power on first.");
+        sendMeshControlCommand("ALL_CALL_SIREN", "EMERGENCY ALERT SIREN TRIGGERED");
+      });
+
+      document.getElementById("adminClearBtn").addEventListener("click", () => {
+        if (!isPoweredOn) return alert("Power on first.");
+        sendMeshControlCommand("FORCE_CLEAR", "Admin cleared the channel.");
+      });
     }
 
-    // User Cards Rendering
-    function renderUserList() {
-      const container = document.getElementById('peers-container');
-      const otherUsers = MESH_ROSTER.filter(u => u !== userId);
+    window.toggleHideUser = function(uid, btn) {
+      const card = document.querySelector(`.contact-card[data-target="${uid}"]`);
+      if (hiddenUsers.has(uid)) {
+        hiddenUsers.delete(uid);
+        if (card) card.style.display = "flex";
+        btn.innerText = "Hide";
+        log(`Restored visibility for ${userMap[uid]}`);
+      } else {
+        hiddenUsers.add(uid);
+        if (card) card.style.display = "none";
+        btn.innerText = "Show";
+        log(`Hidden ${userMap[uid]} from interface`);
+      }
+    };
 
-      container.innerHTML = otherUsers.map(u => {
-        const fullPeerId = 'fr-radio-' + u;
-        const isOnline = connections[fullPeerId] && connections[fullPeerId].open;
+    window.toggleSilenceUser = function(uid, btn) {
+      if (mutedUsers.has(uid)) {
+        mutedUsers.delete(uid);
+        btn.innerText = "Mute";
+        log(`Unmuted ${userMap[uid]}`);
+      } else {
+        mutedUsers.add(uid);
+        btn.innerText = "Unmute";
+        log(`Silenced all incoming audio from ${userMap[uid]}`);
+      }
+    };
 
-        return `
-          <div class="user-card">
-            <div class="user-info">
-              <span class="status-dot ${isOnline ? 'online' : ''}"></span>
-              <div>
-                <div style="font-weight:600; text-transform:capitalize;">${u}</div>
-                <div style="font-size:0.75rem; color:var(--text-dim);">${isOnline ? 'Connected' : 'Offline / Searching...'}</div>
-              </div>
-            </div>
-            <div class="user-actions">
-              <button class="btn-icon btn-ping" title="Send Scream" onclick="sendDirectPing('${u}')">⚡</button>
-            </div>
-          </div>
-        `;
-      }).join('');
+    // Contacts Selection & Buzz/Message Actions
+    contactCards.forEach(card => {
+      const target = card.getAttribute("data-target");
+      if (target === myId) card.style.display = "none";
+
+      const selectBtn = card.querySelector(".contact-btn");
+      selectBtn.addEventListener("click", () => {
+        contactCards.forEach(c => c.classList.remove("active"));
+        card.classList.add("active");
+        selectedTarget = target;
+
+        if (selectedTarget === "talkall") {
+          pttTargetLabel.innerText = "TALK ALL";
+          targetModeLabel.innerText = "BROADCAST";
+          log("Target: Broadcast to Channel");
+        } else {
+          const contactName = userMap[selectedTarget] || selectedTarget;
+          pttTargetLabel.innerText = contactName.toUpperCase();
+          targetModeLabel.innerText = "DIRECT";
+          log(`Target: Direct -> ${contactName}`);
+        }
+      });
+
+      const buzzBtn = card.querySelector(".buzz-btn");
+      buzzBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (!isPoweredOn) return alert("Power on the radio first.");
+        sendBuzzAlert(target);
+      });
+
+      const msgBtn = card.querySelector(".msg-btn");
+      msgBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (!isPoweredOn) return alert("Power on the radio first.");
+        const contactName = target === "talkall" ? "Broadcast (All)" : (userMap[target] || target);
+        const msg = prompt(`Send direct message to ${contactName}:`);
+        if (msg && msg.trim() !== "") {
+          sendDirectTextMessage(target, msg.trim());
+        }
+      });
+    });
+
+    // Quick Canned Soundboard Broadcaster
+    window.sendQuickSound = function(phrase) {
+      if (!isPoweredOn) return alert("Power on the radio first.");
+      sendDirectTextMessage(selectedTarget, `⚡ [QUICK MSG]: ${phrase}`);
+      playChirp("roger");
+      triggerHaptic([30, 50, 30]);
+    };
+
+    // Vocal Wind & Bandpass Filter Toggle
+    filterBtn.addEventListener("click", () => {
+      isFilterActive = !isFilterActive;
+      filterLabel.innerText = isFilterActive ? "EQ: ON" : "EQ: OFF";
+      log(isFilterActive ? "Vocal clarity wind filter ENABLED" : "Vocal filter BYPASSED");
+    });
+
+    // Replay Last Transmission
+    replayBtn.addEventListener("click", () => {
+      if (!lastVoiceBase64) return alert("No incoming call to replay.");
+      log("🔁 Replaying last transmission...");
+      playVoicePayload(lastVoiceBase64);
+    });
+
+    function log(msg) {
+      logBox.innerHTML = `> ${msg}<br>` + logBox.innerHTML;
     }
+
+    function getAudioContext() {
+      if (!audioContext) {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        audioContext = new AudioCtx();
+        masterGainNode = audioContext.createGain();
+        masterGainNode.gain.value = parseFloat(volBoostSlider.value);
+        masterGainNode.connect(audioContext.destination);
+      }
+      if (audioContext.state === "suspended") audioContext.resume();
+      return audioContext;
+    }
+
+    async function requestWakeLock() {
+      try {
+        if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen');
+      } catch (err) {}
+    }
+
+    function sendPushAlert(target, title, message) {
+      const topic = target === "talkall" ? `fr_channel_${activeChannel}_push` : `fr_ping_${target}_direct`;
+      fetch(`https://ntfy.sh/${topic}`, {
+        method: 'POST',
+        headers: { 'Title': title, 'Priority': 'urgent', 'Tags': 'radio,loudspeaker' },
+        body: message
+      }).catch(() => {});
+    }
+
+    // Audio Sound FX (Nextel Chirps & Alerts)
+    function playChirp(type = "roger") {
+      try {
+        const ctx = getAudioContext();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(masterGainNode);
+        
+        if (type === "roger") {
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(1800, ctx.currentTime);
+          osc.frequency.setValueAtTime(2400, ctx.currentTime + 0.04);
+          gain.gain.setValueAtTime(0.3, ctx.currentTime);
+          gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.08);
+          osc.start();
+          osc.stop(ctx.currentTime + 0.08);
+        } else if (type === "buzz") {
+          osc.type = "sawtooth";
+          osc.frequency.setValueAtTime(440, ctx.currentTime);
+          osc.frequency.setValueAtTime(880, ctx.currentTime + 0.1);
+          osc.frequency.setValueAtTime(440, ctx.currentTime + 0.2);
+          gain.gain.setValueAtTime(0.4, ctx.currentTime);
+          gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.35);
+          osc.start();
+          osc.stop(ctx.currentTime + 0.35);
+        } else if (type === "siren") {
+          osc.type = "triangle";
+          osc.frequency.setValueAtTime(600, ctx.currentTime);
+          osc.frequency.linearRampToValueAtTime(1200, ctx.currentTime + 0.25);
+          osc.frequency.linearRampToValueAtTime(600, ctx.currentTime + 0.5);
+          gain.gain.setValueAtTime(0.5, ctx.currentTime);
+          gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.7);
+          osc.start();
+          osc.stop(ctx.currentTime + 0.7);
+        }
+      } catch (e) {}
+    }
+
+    async function togglePower() {
+      const ctx = getAudioContext();
+
+      if (!isPoweredOn) {
+        if ('Notification' in window && Notification.permission !== 'granted') {
+          Notification.requestPermission().catch(() => {});
+        }
+
+        try { keepAliveAudio.play().catch(() => {}); } catch(e) {}
+
+        powerBtn.innerText = "CONNECTING...";
+        powerBtn.disabled = true;
+        log(`Connecting ${myDisplayName}...`);
+
+        try {
+          await requestWakeLock();
+
+          micStream = await navigator.mediaDevices.getUserMedia({
+            audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+            video: false
+          });
+
+          micSourceNode = ctx.createMediaStreamSource(micStream);
+          
+          voiceFilterNode = ctx.createBiquadFilter();
+          voiceFilterNode.type = "bandpass";
+          voiceFilterNode.frequency.value = 1800;
+          voiceFilterNode.Q.value = 0.9;
+
+          micAnalyser = ctx.createAnalyser();
+          micAnalyser.fftSize = 64;
+
+          micSourceNode.connect(voiceFilterNode);
+          voiceFilterNode.connect(micAnalyser);
+
+          const dataArray = new Uint8Array(micAnalyser.frequencyBinCount);
+          meterInterval = setInterval(() => {
+            if (!isPoweredOn) return;
+            micAnalyser.getByteFrequencyData(dataArray);
+            let sum = 0;
+            for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
+            let avg = sum / dataArray.length;
+            let pct = Math.min(100, Math.round((avg / 128) * 100));
+
+            if (isTransmitting) {
+              meterBar.style.width = pct + "%";
+              meterBar.style.backgroundColor = "#ef4444";
+            } else {
+              meterBar.style.width = "0%";
+            }
+          }, 50);
+
+          connectBroker();
+
+        } catch (err) {
+          alert("Microphone required: " + err.message);
+          powerBtn.innerText = "POWER ON RADIO";
+          powerBtn.disabled = false;
+        }
+      } else {
+        shutdownRadio();
+      }
+    }
+
+    function connectBroker() {
+      const connectionClientId = `fr-${myId}-${Math.floor(1000 + Math.random() * 9000)}`;
+      mqttClient = new Paho.MQTT.Client("broker.hivemq.com", 8884, connectionClientId);
+
+      mqttClient.onConnectionLost = (responseObject) => {
+        if (responseObject.errorCode !== 0 && isPoweredOn) {
+          log("Re-establishing link...");
+          statusBadge.innerText = "RECONNECTING";
+          statusBadge.className = "status-badge";
+          setTimeout(connectBroker, 1500);
+        }
+      };
+
+      mqttClient.onMessageArrived = (message) => handleIncomingRadioMessage(message);
+
+      mqttClient.connect({
+        useSSL: true,
+        timeout: 4,
+        keepAliveInterval: 10,
+        cleanSession: true,
+        onSuccess: () => {
+          isPoweredOn = true;
+          powerBtn.innerText = "POWER OFF";
+          powerBtn.className = "power-btn off";
+          powerBtn.disabled = false;
+          statusBadge.innerText = "ONLINE";
+          statusBadge.className = "status-badge online";
+          log("Mesh link established.");
+
+          mqttClient.subscribe("friendradio/channel/#");
+          mqttClient.subscribe(`friendradio/direct/${myId}`);
+          mqttClient.subscribe("friendradio/presence");
+          mqttClient.subscribe("friendradio/control");
+          mqttClient.subscribe("friendradio/state/#");
+
+          if (heartbeatInterval) clearInterval(heartbeatInterval);
+          heartbeatInterval = setInterval(sendPresenceHeartbeat, 12000);
+          sendPresenceHeartbeat();
+        },
+        onFailure: (err) => {
+          log("Link failed. Retrying in 2s...");
+          setTimeout(connectBroker, 2000);
+        }
+      });
+    }
+
+    function sendPresenceHeartbeat() {
+      if (!mqttClient || !mqttClient.isConnected()) return;
+      const payload = new Paho.MQTT.Message(JSON.stringify({
+        userId: myId,
+        userName: myDisplayName,
+        status: userStatusSelect.value,
+        timestamp: Date.now()
+      }));
+      payload.destinationName = "friendradio/presence";
+      mqttClient.send(payload);
+    }
+
+    userStatusSelect.addEventListener("change", () => {
+      sendPresenceHeartbeat();
+      log(`Status updated: ${userStatusSelect.value}`);
+    });
+
+    function shutdownRadio() {
+      if (wakeLock) { wakeLock.release().catch(() => {}); wakeLock = null; }
+      try { keepAliveAudio.pause(); } catch(e) {}
+      if (heartbeatInterval) clearInterval(heartbeatInterval);
+      if (meterInterval) clearInterval(meterInterval);
+      if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
+      if (mqttClient && mqttClient.isConnected()) mqttClient.disconnect();
+
+      isPoweredOn = false;
+      powerBtn.innerText = "POWER ON RADIO";
+      powerBtn.className = "power-btn";
+      statusBadge.innerText = "RADIO OFF";
+      statusBadge.className = "status-badge";
+      meterBar.style.width = "0%";
+      log("Radio powered down.");
+    }
+
+    function sendBuzzAlert(target) {
+      playChirp("buzz");
+      triggerHaptic([100, 50, 100]);
+      sendPushAlert(target, `⚡ BUZZ ALERT`, `${myDisplayName} is alerting you!`);
+      const topic = target === "talkall" ? `friendradio/channel/${activeChannel}` : `friendradio/direct/${target}`;
+      const msg = new Paho.MQTT.Message(JSON.stringify({
+        type: "BUZZ_ALERT",
+        sender: myId,
+        senderName: myDisplayName,
+        target: target
+      }));
+      msg.destinationName = topic;
+      mqttClient.send(msg);
+      log(`⚡ Buzz sent to ${target === 'talkall' ? 'CHANNEL' : userMap[target]}`);
+    }
+
+    function sendDirectTextMessage(target, text) {
+      sendPushAlert(target, `💬 ${myDisplayName}`, text);
+      const topic = target === "talkall" ? `friendradio/channel/${activeChannel}` : `friendradio/direct/${target}`;
+      const msgPayload = new Paho.MQTT.Message(JSON.stringify({
+        type: "TEXT_MESSAGE",
+        sender: myId,
+        senderName: myDisplayName,
+        target: target,
+        text: text
+      }));
+      msgPayload.destinationName = topic;
+      mqttClient.send(msgPayload);
+      log(`💬 Sent to ${target === 'talkall' ? 'ALL' : userMap[target]}: "${text}"`);
+    }
+
+    function sendMeshControlCommand(cmd, reason) {
+      const payload = new Paho.MQTT.Message(JSON.stringify({
+        type: "ADMIN_COMMAND",
+        cmd: cmd,
+        sender: myId,
+        reason: reason
+      }));
+      payload.destinationName = "friendradio/control";
+      mqttClient.send(payload);
+      log(`⚙️ Admin Command Broadcasted: ${cmd}`);
+    }
+
+    function broadcastLineState(isBusy) {
+      if (!mqttClient || !mqttClient.isConnected()) return;
+      const statePayload = new Paho.MQTT.Message(JSON.stringify({
+        type: "LINE_STATE",
+        sender: myId,
+        senderName: myDisplayName,
+        isBusy: isBusy,
+        channel: activeChannel
+      }));
+      statePayload.destinationName = `friendradio/state/${activeChannel}`;
+      mqttClient.send(statePayload);
+    }
+
+    function startTransmit() {
+      if (!isPoweredOn || isTransmitting || !micStream || isChannelLocked) return;
+      isTransmitting = true;
+      audioChunks = [];
+      getAudioContext();
+      playChirp("roger");
+      triggerHaptic([60]);
+
+      broadcastLineState(true);
+      sendPushAlert(selectedTarget, `🚨 FRIEND RADIO TRANSMISSION`, `${myDisplayName} speaking...`);
+
+      pttBtn.classList.add("active");
+      statusBadge.innerText = "TRANSMITTING (TX)";
+      statusBadge.className = "status-badge tx";
+
+      let mimeType = "audio/webm;codecs=opus";
+      if (!MediaRecorder.isTypeSupported(mimeType)) {
+        mimeType = "audio/ogg;codecs=opus";
+        if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = "";
+      }
+
+      mediaRecorder = new MediaRecorder(micStream, { audioBitsPerSecond: 12000 });
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) audioChunks.push(e.data);
+      };
+
+      mediaRecorder.onstop = async () => {
+        if (audioChunks.length === 0) return;
+        const fullBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType || "audio/webm" });
+        const buffer = await fullBlob.arrayBuffer();
+        const base64Data = arrayBufferToBase64(buffer);
+
+        let topic = selectedTarget === "talkall" 
+          ? `friendradio/channel/${activeChannel}` 
+          : `friendradio/direct/${selectedTarget}`;
+
+        const voiceMsg = new Paho.MQTT.Message(JSON.stringify({
+          type: "VOICE_TRANSMISSION",
+          sender: myId,
+          senderName: myDisplayName,
+          target: selectedTarget,
+          data: base64Data
+        }));
+        voiceMsg.destinationName = topic;
+        mqttClient.send(voiceMsg);
+      };
+
+      mediaRecorder.start();
+    }
+
+    function stopTransmit() {
+      if (!isTransmitting) return;
+      isTransmitting = false;
+
+      triggerHaptic([30]);
+      broadcastLineState(false);
+
+      if (mediaRecorder && mediaRecorder.state !== "inactive") mediaRecorder.stop();
+
+      pttBtn.classList.remove("active");
+      statusBadge.innerText = "ONLINE";
+      statusBadge.className = "status-badge online";
+      meterBar.style.width = "0%";
+    }
+
+    function handleIncomingRadioMessage(message) {
+      try {
+        const payload = JSON.parse(message.payloadString);
+        if (payload.sender === myId || payload.userId === myId) return;
+
+        // Presence Heartbeat Update
+        if (message.destinationName === "friendradio/presence") {
+          const uId = payload.userId;
+          const dot = document.getElementById(`dot-${uId}`);
+          const tag = document.getElementById(`status-${uId}`);
+          if (dot) dot.className = "presence-dot online";
+          if (tag) tag.innerText = payload.status || "Online";
+
+          clearTimeout(presenceTimers[uId]);
+          presenceTimers[uId] = setTimeout(() => {
+            if (dot) dot.className = "presence-dot";
+            if (tag) tag.innerText = "Offline";
+          }, 35000);
+          return;
+        }
+
+        // Busy Line Lockout Interlock
+        if (payload.type === "LINE_STATE") {
+          if (payload.isBusy) {
+            isChannelLocked = true;
+            pttBtn.classList.add("busy-locked");
+            pttTargetLabel.innerText = `BUSY: ${payload.senderName.toUpperCase()}`;
+          } else {
+            isChannelLocked = false;
+            pttBtn.classList.remove("busy-locked");
+            pttTargetLabel.innerText = selectedTarget === "talkall" ? "TALK ALL" : (userMap[selectedTarget] || selectedTarget).toUpperCase();
+          }
+          return;
+        }
+
+        // Admin Mesh Commands
+        if (payload.type === "ADMIN_COMMAND") {
+          if (payload.cmd === "ALL_CALL_SIREN") {
+            playChirp("siren");
+            triggerHaptic([200, 100, 200, 100, 400]);
+            alert(`🚨 EMERGENCY ALL-CALL SIREN:\n\n${payload.reason}`);
+          } else if (payload.cmd === "FORCE_CLEAR") {
+            stopTransmit();
+            isChannelLocked = false;
+            pttBtn.classList.remove("busy-locked");
+            log("⚡ Line forced clear by Admin.");
+          }
+          return;
+        }
+
+        if (mutedUsers.has(payload.sender)) return;
+
+        // Buzz Ring Alerts
+        if (payload.type === "BUZZ_ALERT") {
+          playChirp("buzz");
+          triggerHaptic([150, 80, 150]);
+          log(`⚡ BUZZ from ${payload.senderName}!`);
+          return;
+        }
+
+        // Direct Text Messages
+        if (payload.type === "TEXT_MESSAGE") {
+          playChirp("roger");
+          triggerHaptic([50, 50]);
+          const directTag = payload.target === "talkall" ? "📢 [ALL]" : "🔒 [DIRECT]";
+          log(`${directTag} 💬 ${payload.senderName}: "${payload.text}"`);
+
+          if ('Notification' in window && Notification.permission === 'granted' && document.hidden) {
+            new Notification(`💬 ${payload.senderName}`, { body: payload.text });
+          } else {
+            alert(`💬 Message from ${payload.senderName}:\n\n"${payload.text}"`);
+          }
+          return;
+        }
+
+        // Live PTT Voice Transmissions
+        if (payload.type === "VOICE_TRANSMISSION") {
+          lastVoiceBase64 = payload.data;
+          const callType = payload.target === "talkall" ? "📢 [ALL]" : "🔒 [DIRECT]";
+          statusBadge.innerText = `RX: ${payload.senderName.toUpperCase()}`;
+          statusBadge.className = "status-badge rx";
+          log(`${callType} Voice: ${payload.senderName}`);
+          
+          triggerHaptic([80]);
+          playChirp("roger");
+          playVoicePayload(payload.data);
+        }
+      } catch (e) {}
+    }
+
+    async function playVoicePayload(base64Data) {
+      try {
+        const ctx = getAudioContext();
+        const audioBytes = base64ToArrayBuffer(base64Data);
+        const audioBuffer = await ctx.decodeAudioData(audioBytes);
+        const source = ctx.createBufferSource();
+        source.buffer = audioBuffer;
+
+        if (isFilterActive) {
+          const filter = ctx.createBiquadFilter();
+          filter.type = "peaking";
+          filter.frequency.value = 2200;
+          filter.gain.value = 4;
+          source.connect(filter);
+          filter.connect(masterGainNode);
+        } else {
+          source.connect(masterGainNode);
+        }
+        
+        source.onended = () => {
+          statusBadge.innerText = "ONLINE";
+          statusBadge.className = "status-badge online";
+        };
+
+        source.start(0);
+      } catch (err) {
+        log("Playback error: " + err.message);
+      }
+    }
+
+    function arrayBufferToBase64(buffer) {
+      let binary = "";
+      const bytes = new Uint8Array(buffer);
+      for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+      return window.btoa(binary);
+    }
+
+    function base64ToArrayBuffer(base64) {
+      const binary_string = window.atob(base64);
+      const len = binary_string.length;
+      const bytes = new Uint8Array(len);
+      for (let i = 0; i < len; i++) bytes[i] = binary_string.charCodeAt(i);
+      return bytes.buffer;
+    }
+
+    powerBtn.addEventListener("click", togglePower);
+
+    pttBtn.addEventListener("touchstart", (e) => { e.preventDefault(); startTransmit(); });
+    pttBtn.addEventListener("touchend", (e) => { e.preventDefault(); stopTransmit(); });
+    pttBtn.addEventListener("mousedown", startTransmit);
+    pttBtn.addEventListener("mouseup", stopTransmit);
   </script>
 </body>
 </html>
