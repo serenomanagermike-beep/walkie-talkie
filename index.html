@@ -916,7 +916,7 @@
     }
 
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js?v=2026.08.25-3').then(reg => {
+      navigator.serviceWorker.register('sw.js?v=2026.08.25-4').then(reg => {
         reg.update();
       }).catch(() => {});
     }
@@ -1179,7 +1179,6 @@
       }).catch(() => {});
     }
 
-    // Text-to-Speech Voice Synthesizer
     function speakPhrase(phrase) {
       if ('speechSynthesis' in window) {
         window.speechSynthesis.cancel();
@@ -1191,7 +1190,6 @@
       }
     }
 
-    // Audio Sound FX (Nextel Chirps & Sirens)
     function playChirp(type = "roger") {
       try {
         const ctx = getAudioContext();
@@ -1575,7 +1573,6 @@
           
           triggerHaptic([80]);
 
-          // Davey Voice Intro Trigger
           if (myId === "davey") {
             speakPhrase("Hell yeah!");
           } else {
@@ -1632,12 +1629,45 @@
       return bytes.buffer;
     }
 
+    // Power Toggle
     powerBtn.addEventListener("click", togglePower);
 
+    // Standard On-Screen Touch / Mouse Events
     pttBtn.addEventListener("touchstart", (e) => { e.preventDefault(); startTransmit(); });
     pttBtn.addEventListener("touchend", (e) => { e.preventDefault(); stopTransmit(); });
     pttBtn.addEventListener("mousedown", startTransmit);
     pttBtn.addEventListener("mouseup", stopTransmit);
+
+    // Physical Hardware Button Triggers (Volume UP, Spacebar, Headset Action)
+    window.addEventListener("keydown", (e) => {
+      const isInputActive = document.activeElement && (document.activeElement.tagName === "INPUT" || document.activeElement.tagName === "TEXTAREA");
+      if (isInputActive) return;
+
+      if ((e.code === "Space" || e.key === "AudioVolumeUp" || e.code === "VolumeUp") && !isTransmitting) {
+        e.preventDefault();
+        startTransmit();
+      }
+    });
+
+    window.addEventListener("keyup", (e) => {
+      const isInputActive = document.activeElement && (document.activeElement.tagName === "INPUT" || document.activeElement.tagName === "TEXTAREA");
+      if (isInputActive) return;
+
+      if (e.code === "Space" || e.key === "AudioVolumeUp" || e.code === "VolumeUp") {
+        e.preventDefault();
+        stopTransmit();
+      }
+    });
+
+    // Bluetooth Headset / Earbud Play-Pause Media Intercept
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.setActionHandler('play', () => {
+        if (!isTransmitting) startTransmit();
+      });
+      navigator.mediaSession.setActionHandler('pause', () => {
+        if (isTransmitting) stopTransmit();
+      });
+    }
   </script>
 </body>
 </html>
