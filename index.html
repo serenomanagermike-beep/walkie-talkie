@@ -95,7 +95,6 @@
       50% { opacity: 0.6; }
     }
 
-    /* Admin Panel */
     #admin-panel {
       display: none;
       width: 100%;
@@ -124,7 +123,6 @@
       color: var(--text-main);
     }
 
-    /* User List */
     #peers-container {
       width: 100%;
       max-width: 480px;
@@ -155,6 +153,10 @@
       width: 10px;
       height: 10px;
       border-radius: 50%;
+      background-color: #64748b;
+    }
+
+    .status-dot.online {
       background-color: var(--accent-green);
     }
 
@@ -191,7 +193,6 @@
       background: #ea580c;
     }
 
-    /* PTT Button */
     .ptt-container {
       width: 100%;
       max-width: 480px;
@@ -258,21 +259,23 @@
   </div>
 
   <script>
-    // URL Params & Identity
+    // Known channel members roster
+    const MESH_ROSTER = ['laptop', 'mikey', 'phone', 'office'];
+
+    // Identity setup from URL (?user=mikey or ?user=laptop)
     const urlParams = new URLSearchParams(window.location.search);
-    const userId = urlParams.get('user') || 'user-' + Math.floor(Math.random() * 1000);
-    const isAdmin = ['laptop', 'mikey'].includes(userId.toLowerCase());
+    const userId = (urlParams.get('user') || 'user-' + Math.floor(Math.random() * 1000)).toLowerCase();
+    const isAdmin = ['laptop', 'mikey'].includes(userId);
 
     document.getElementById('my-id-badge').textContent = userId;
     if (isAdmin) {
       document.getElementById('admin-toggle-btn').style.display = 'block';
     }
 
-    // Audio Elements
+    // Audio Alert Clip
     const screamAudio = new Audio('beavis-alert.mp3');
     screamAudio.preload = 'auto';
 
-    // Unlock audio context on initial screen touch (Mobile Safari / Chrome bypass)
     window.addEventListener('pointerdown', () => {
       screamAudio.load();
     }, { once: true });
@@ -281,15 +284,11 @@
       try {
         screamAudio.currentTime = 0;
         screamAudio.volume = 1.0;
-        const playPromise = screamAudio.play();
-        if (playPromise !== undefined) {
-          playPromise.catch(e => console.warn("Audio waiting for user gesture:", e));
-        }
-        if (navigator.vibrate) {
-          navigator.vibrate([200, 100, 200, 100, 400]);
-        }
+        const p = screamAudio.play();
+        if (p) p.catch(() => {});
+        if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 400]);
       } catch (err) {
-        console.error("Audio error:", err);
+        console.error(err);
       }
     }
 
@@ -300,50 +299,81 @@
       setTimeout(() => { banner.style.display = 'none'; }, 5000);
     }
 
-    // WebRTC Peer Mesh Setup
-    const peer = new Peer(userId, {
-      debug: 1
-    });
-
+    // WebRTC Peer Configuration
+    const peer = new Peer('fr-radio-' + userId, { debug: 1 });
     const connections = {};
     const calls = {};
     let localStream = null;
 
-    // Get microphone access
     navigator.mediaDevices.getUserMedia({ audio: true, video: false })
       .then(stream => {
         localStream = stream;
-        // Default mute until PTT pressed
-        localStream.getAudioTracks().forEach(track => track.enabled = false);
+        localStream.getAudioTracks().forEach(t => t.enabled = false);
       })
-      .catch(err => console.error("Mic access denied:", err));
+      .catch(err => console.warn("Mic access pending user permission:", err));
 
-    peer.on('open', (id) => {
-      console.log('Registered Peer ID:', id);
+    peer.on('open', () => {
       renderUserList();
+      startMeshDiscovery();
     });
 
-    peer.on('connection', (conn) => {
-      setupDataConnection(conn);
+    peer.on('connection', conn => {
+      setupConnectionHandlers(conn);
     });
 
-    peer.on('call', (call) => {
+    peer.on('call', call => {
       call.answer(localStream);
-      call.on('stream', (remoteStream) => {
+      call.on('stream', remoteStream => {
         playIncomingAudio(call.peer, remoteStream);
       });
+      calls[call.peer] = call;
     });
 
-    function setupDataConnection(conn) {
+    // Auto-connect to other roster devices
+    function startMeshDiscovery() {
+      setInterval(() => {
+        MESH_ROSTER.forEach(targetUser => {
+          if (targetUser === userId) return;
+          const targetPeerId = 'fr-radio-' + targetUser;
+
+          if (!connections[targetPeerId] || !connections[targetPeerId].open) {
+            const conn = peer.connect(targetPeerId, { reliable: true });
+            setupConnectionHandlers(conn);
+
+            if (localStream && !calls[targetPeerId]) {
+              const call = peer.call(targetPeerId, localStream);
+              if (call) {
+                call.on('stream', remoteStream => {
+                  playIncomingAudio(targetPeerId, remoteStream);
+                });
+                calls[targetPeerId] = call;
+              }
+            }
+          }
+        });
+      }, 3000);
+    }
+
+    function setupConnectionHandlers(conn) {
       connections[conn.peer] = conn;
-      conn.on('data', (data) => {
+
+      conn.on('open', () => {
+        renderUserList();
+      });
+
+      conn.on('data', data => {
         handleIncomingData(data);
       });
+
       conn.on('close', () => {
         delete connections[conn.peer];
         renderUserList();
       });
-      renderUserList();
+
+      conn.on('error', () => {
+        delete connections[conn.peer];
+        renderUserList();
+      });
     }
 
     function handleIncomingData(data) {
@@ -351,31 +381,31 @@
 
       if (msg.type === 'DIRECT_PING') {
         playBeavisScream();
-        flashAlertBanner(`⚡ Incoming Scream Alert from ${msg.from}!`);
+        flashAlertBanner(`⚡ Incoming Alert from ${msg.from}!`);
       } else if (msg.type === 'EMERGENCY_SIREN') {
         playBeavisScream();
-        flashAlertBanner(`🚨 EMERGENCY ALL-CALL FROM ${msg.from}`);
+        flashAlertBanner(`🚨 EMERGENCY SIREN FROM ${msg.from}`);
       } else if (msg.type === 'RESET') {
         location.reload();
       }
     }
 
-    // Alert / Direct Ping
-    function sendDirectPing(targetPeerId) {
-      const payload = { type: 'DIRECT_PING', from: userId };
-      
+    function sendDirectPing(targetUsername) {
+      const targetPeerId = 'fr-radio-' + targetUsername;
+      const payload = JSON.stringify({ type: 'DIRECT_PING', from: userId });
+
       if (connections[targetPeerId] && connections[targetPeerId].open) {
-        connections[targetPeerId].send(JSON.stringify(payload));
+        connections[targetPeerId].send(payload);
+        flashAlertBanner(`⚡ Alert sent to ${targetUsername}`);
       } else {
         const conn = peer.connect(targetPeerId);
         conn.on('open', () => {
-          conn.send(JSON.stringify(payload));
+          conn.send(payload);
+          flashAlertBanner(`⚡ Alert sent to ${targetUsername}`);
         });
       }
-      flashAlertBanner(`⚡ Alert sent to ${targetPeerId}`);
     }
 
-    // Audio Output Player
     function playIncomingAudio(peerId, stream) {
       let audioEl = document.getElementById(`audio-${peerId}`);
       if (!audioEl) {
@@ -387,18 +417,18 @@
       audioEl.srcObject = stream;
     }
 
-    // PTT Transmit Control
+    // PTT Trigger Controls
     const pttBtn = document.getElementById('ptt-button');
 
     function startTransmitting() {
       if (!localStream) return;
-      localStream.getAudioTracks().forEach(track => track.enabled = true);
+      localStream.getAudioTracks().forEach(t => t.enabled = true);
       pttBtn.classList.add('transmitting');
     }
 
     function stopTransmitting() {
       if (!localStream) return;
-      localStream.getAudioTracks().forEach(track => track.enabled = false);
+      localStream.getAudioTracks().forEach(t => t.enabled = false);
       pttBtn.classList.remove('transmitting');
     }
 
@@ -406,7 +436,7 @@
     pttBtn.addEventListener('pointerup', stopTransmitting);
     pttBtn.addEventListener('pointerleave', stopTransmitting);
 
-    // Admin Toggle
+    // Admin Panel Controls
     function toggleAdminPanel() {
       const panel = document.getElementById('admin-panel');
       panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
@@ -415,32 +445,35 @@
     function sendAdminBroadcast(type) {
       const payload = JSON.stringify({ type: type, from: userId });
       Object.values(connections).forEach(conn => {
-        if (conn.open) conn.send(payload);
+        if (conn && conn.open) conn.send(payload);
       });
       if (type === 'EMERGENCY_SIREN') playBeavisScream();
     }
 
-    // UI Roster Render
+    // User Cards Rendering
     function renderUserList() {
       const container = document.getElementById('peers-container');
-      const activePeers = Object.keys(connections);
+      const otherUsers = MESH_ROSTER.filter(u => u !== userId);
 
-      if (activePeers.length === 0) {
-        container.innerHTML = `<div style="text-align:center; color:var(--text-dim); padding:1rem;">Waiting for friends to join...</div>`;
-        return;
-      }
+      container.innerHTML = otherUsers.map(u => {
+        const fullPeerId = 'fr-radio-' + u;
+        const isOnline = connections[fullPeerId] && connections[fullPeerId].open;
 
-      container.innerHTML = activePeers.map(peerId => `
-        <div class="user-card" id="card-${peerId}">
-          <div class="user-info">
-            <span class="status-dot"></span>
-            <span style="font-weight:600;">${peerId}</span>
+        return `
+          <div class="user-card">
+            <div class="user-info">
+              <span class="status-dot ${isOnline ? 'online' : ''}"></span>
+              <div>
+                <div style="font-weight:600; text-transform:capitalize;">${u}</div>
+                <div style="font-size:0.75rem; color:var(--text-dim);">${isOnline ? 'Connected' : 'Offline / Searching...'}</div>
+              </div>
+            </div>
+            <div class="user-actions">
+              <button class="btn-icon btn-ping" title="Send Scream" onclick="sendDirectPing('${u}')">⚡</button>
+            </div>
           </div>
-          <div class="user-actions">
-            <button class="btn-icon btn-ping" title="Send Beavis Alert" onclick="sendDirectPing('${peerId}')">⚡</button>
-          </div>
-        </div>
-      `).join('');
+        `;
+      }).join('');
     }
   </script>
 </body>
