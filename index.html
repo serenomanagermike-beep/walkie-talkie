@@ -88,9 +88,7 @@
       align-items: center;
       margin-bottom: 4px;
     }
-    .header-title {
-      text-align: left;
-    }
+    .header-title { text-align: left; }
     .header-title h1 {
       font-family: 'Chakra Petch', sans-serif;
       font-size: 1.35rem;
@@ -109,7 +107,6 @@
       font-weight: 700;
     }
 
-    /* Sunset / Beach Info Widget */
     .beach-widget {
       background: rgba(15, 23, 42, 0.75);
       border: 1px solid rgba(254, 240, 138, 0.35);
@@ -123,7 +120,6 @@
     }
     .beach-widget span { display: block; color: #bae6fd; font-size: 0.58rem; }
 
-    /* Channel Tabs */
     .channel-tabs {
       width: 100%;
       max-width: 400px;
@@ -243,6 +239,27 @@
       cursor: pointer;
     }
 
+    /* Volume Boost Controller Row */
+    .vol-control-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      border-radius: 6px;
+      padding: 2px 8px;
+      margin-bottom: 6px;
+      font-family: 'Chakra Petch', sans-serif;
+      font-size: 0.62rem;
+      color: #bae6fd;
+    }
+    .vol-slider {
+      flex: 1;
+      margin: 0 8px;
+      accent-color: #38bdf8;
+      cursor: pointer;
+    }
+
     .contacts-header {
       display: flex;
       justify-content: space-between;
@@ -252,7 +269,7 @@
       color: #bae6fd;
       letter-spacing: 1px;
       text-transform: uppercase;
-      margin-bottom: 6px;
+      margin-bottom: 4px;
       padding: 0 2px;
       font-weight: 700;
     }
@@ -262,7 +279,7 @@
       grid-template-columns: repeat(2, 1fr);
       gap: 5px;
       margin-bottom: 6px;
-      max-height: 175px;
+      max-height: 165px;
       overflow-y: auto;
       padding-right: 2px;
     }
@@ -280,7 +297,7 @@
       background: transparent;
       border: none;
       color: #e0f2fe;
-      padding: 6px 6px;
+      padding: 5px 6px;
       font-family: 'Chakra Petch', sans-serif;
       font-size: 0.68rem;
       font-weight: 700;
@@ -327,9 +344,7 @@
       align-items: center;
       justify-content: center;
     }
-    .buzz-btn:active, .msg-btn:active {
-      background: rgba(254, 240, 138, 0.3);
-    }
+    .buzz-btn:active, .msg-btn:active { background: rgba(254, 240, 138, 0.3); }
     .buzz-btn { border-right: 1px solid rgba(255, 255, 255, 0.1); }
 
     .contact-card.active {
@@ -347,7 +362,7 @@
     .contact-card.talkall .contact-btn {
       font-size: 0.75rem;
       font-weight: 800;
-      padding: 7px 8px;
+      padding: 6px 8px;
     }
 
     .meter-container {
@@ -365,6 +380,35 @@
       transition: width 0.05s ease;
     }
 
+    /* Soundboard Quick Response Row */
+    .soundboard-row {
+      width: 100%;
+      max-width: 400px;
+      display: flex;
+      gap: 4px;
+      overflow-x: auto;
+      padding-bottom: 2px;
+      margin-bottom: 4px;
+    }
+    .soundboard-btn {
+      background: rgba(15, 23, 42, 0.75);
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      color: #bae6fd;
+      border-radius: 12px;
+      padding: 3px 8px;
+      font-family: 'Chakra Petch', sans-serif;
+      font-size: 0.62rem;
+      font-weight: 700;
+      white-space: nowrap;
+      cursor: pointer;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+    .soundboard-btn:active {
+      background: #0284c7;
+      color: #ffffff;
+      transform: scale(0.95);
+    }
+
     /* PTT Area */
     .ptt-container {
       display: flex;
@@ -375,8 +419,8 @@
       position: relative;
     }
     .ptt-btn {
-      width: 145px;
-      height: 145px;
+      width: 140px;
+      height: 140px;
       border-radius: 50%;
       border: 5px solid #38bdf8;
       background: radial-gradient(circle at 35% 35%, #0ea5e9 0%, #0369a1 100%);
@@ -390,8 +434,8 @@
       transition: all 0.12s ease;
     }
     .ptt-btn svg {
-      width: 68px;
-      height: 68px;
+      width: 65px;
+      height: 65px;
       fill: #ffffff;
       filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5));
       pointer-events: none;
@@ -406,7 +450,7 @@
       text-shadow: 0 2px 4px rgba(0,0,0,0.7);
       pointer-events: none;
       text-align: center;
-      max-width: 120px;
+      max-width: 115px;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -419,7 +463,19 @@
     }
     .ptt-btn.active svg { transform: scale(0.92); fill: #fee2e2; }
 
-    /* Quick Action Side Buttons (Replay & Audio Profile) */
+    /* Channel Busy Lockout Styling */
+    .ptt-btn.busy-locked {
+      border-color: #f59e0b;
+      background: radial-gradient(circle at 35% 35%, #b45309 0%, #78350f 100%);
+      box-shadow: 0 0 25px rgba(245, 158, 11, 0.7);
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+    .ptt-btn.busy-locked span {
+      color: #fed7aa;
+      font-size: 0.6rem;
+    }
+
     .side-control-btn {
       width: 44px;
       height: 44px;
@@ -542,10 +598,7 @@
       font-family: 'Chakra Petch', sans-serif;
       font-size: 0.75rem;
     }
-    .admin-actions {
-      display: flex;
-      gap: 5px;
-    }
+    .admin-actions { display: flex; gap: 5px; }
     .admin-btn {
       background: rgba(15, 23, 42, 0.8);
       border: 1px solid #38bdf8;
@@ -585,7 +638,7 @@
   <!-- Sub-Channels / Groups -->
   <div class="channel-tabs">
     <button class="tab-btn active" data-channel="main">🌐 MAIN CREW</button>
-    <button class="tab-btn" data-channel="work">🛠️ WORK / FACILITY</button>
+    <button class="tab-btn" data-channel="work">🛠️ WORK / CONDOS</button>
     <button class="tab-btn emergency" data-channel="emergency">🚨 EMERGENCY</button>
   </div>
 
@@ -603,6 +656,13 @@
           <option value="🤫 Busy">🤫 Busy</option>
         </select>
       </div>
+    </div>
+
+    <!-- Volume Booster Gain Slider -->
+    <div class="vol-control-row">
+      <span>🔊 BOOST</span>
+      <input type="range" id="volBoostSlider" class="vol-slider" min="0.5" max="2.0" step="0.1" value="1.0">
+      <span id="volBoostLabel">100%</span>
     </div>
 
     <div class="contacts-header">
@@ -742,6 +802,14 @@
     </div>
   </div>
 
+  <!-- Quick Soundboard Buttons -->
+  <div class="soundboard-row">
+    <button class="soundboard-btn" onclick="sendQuickSound('10-4, Copy That!')">📻 10-4 Copy</button>
+    <button class="soundboard-btn" onclick="sendQuickSound('Heading over now!')">🚶 Heading Over</button>
+    <button class="soundboard-btn" onclick="sendQuickSound('At the beach spot!')">🏖️ At Beach</button>
+    <button class="soundboard-btn" onclick="sendQuickSound('Call my cell phone!')">📱 Call My Cell</button>
+  </div>
+
   <!-- PTT Trigger Area & Quick Controls -->
   <div class="ptt-container">
     <button id="replayBtn" class="side-control-btn" title="Replay Last Transmission">
@@ -845,11 +913,13 @@
     let micAnalyser = null;
     let micSourceNode = null;
     let voiceFilterNode = null;
+    let masterGainNode = null;
     let meterInterval = null;
     let heartbeatInterval = null;
     let isPoweredOn = false;
     let isTransmitting = false;
     let isFilterActive = true;
+    let isChannelLocked = false;
     let wakeLock = null;
     let lastVoiceBase64 = null;
     const presenceTimers = {};
@@ -870,6 +940,8 @@
     const replayBtn = document.getElementById("replayBtn");
     const filterBtn = document.getElementById("filterBtn");
     const filterLabel = document.getElementById("filterLabel");
+    const volBoostSlider = document.getElementById("volBoostSlider");
+    const volBoostLabel = document.getElementById("volBoostLabel");
 
     // Modal Elements
     const radarOpenBtn = document.getElementById("radarOpenBtn");
@@ -881,11 +953,18 @@
     const adminModal = document.getElementById("adminModal");
     const adminUserList = document.getElementById("adminUserList");
 
+    // Haptic Vibration Helper
+    function triggerHaptic(pattern = [40]) {
+      if ("vibrate" in navigator) {
+        try { navigator.vibrate(pattern); } catch (e) {}
+      }
+    }
+
     // Sunset Countdown Calculator for Madeira Beach / St Pete Beach
     function updateSunsetCountdown() {
       const now = new Date();
       const sunset = new Date();
-      sunset.setHours(19, 58, 0, 0); // Approximate local summer sunset time
+      sunset.setHours(19, 58, 0, 0);
       
       let diff = sunset - now;
       if (diff > 0) {
@@ -898,6 +977,15 @@
     }
     updateSunsetCountdown();
     setInterval(updateSunsetCountdown, 60000);
+
+    // Volume Gain Slider Controller
+    volBoostSlider.addEventListener("input", (e) => {
+      const val = parseFloat(e.target.value);
+      volBoostLabel.innerText = Math.round(val * 100) + "%";
+      if (masterGainNode) {
+        masterGainNode.gain.value = val;
+      }
+    });
 
     // Channel Switching
     document.querySelectorAll(".tab-btn").forEach(btn => {
@@ -1024,6 +1112,14 @@
       });
     });
 
+    // Quick Canned Soundboard Broadcaster
+    window.sendQuickSound = function(phrase) {
+      if (!isPoweredOn) return alert("Power on the radio first.");
+      sendDirectTextMessage(selectedTarget, `⚡ [QUICK MSG]: ${phrase}`);
+      playChirp("roger");
+      triggerHaptic([30, 50, 30]);
+    };
+
     // Vocal Wind & Bandpass Filter Toggle
     filterBtn.addEventListener("click", () => {
       isFilterActive = !isFilterActive;
@@ -1046,6 +1142,9 @@
       if (!audioContext) {
         const AudioCtx = window.AudioContext || window.webkitAudioContext;
         audioContext = new AudioCtx();
+        masterGainNode = audioContext.createGain();
+        masterGainNode.gain.value = parseFloat(volBoostSlider.value);
+        masterGainNode.connect(audioContext.destination);
       }
       if (audioContext.state === "suspended") audioContext.resume();
       return audioContext;
@@ -1073,7 +1172,7 @@
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
         osc.connect(gain);
-        gain.connect(ctx.destination);
+        gain.connect(masterGainNode);
         
         if (type === "roger") {
           osc.type = "sine";
@@ -1129,7 +1228,6 @@
 
           micSourceNode = ctx.createMediaStreamSource(micStream);
           
-          // Coastal Wind / Vocal Bandpass EQ Filter (cuts sub-150Hz rumble & shrill highs)
           voiceFilterNode = ctx.createBiquadFilter();
           voiceFilterNode.type = "bandpass";
           voiceFilterNode.frequency.value = 1800;
@@ -1199,13 +1297,12 @@
           statusBadge.className = "status-badge online";
           log("Mesh link established.");
 
-          // Subscriptions
           mqttClient.subscribe("friendradio/channel/#");
           mqttClient.subscribe(`friendradio/direct/${myId}`);
           mqttClient.subscribe("friendradio/presence");
           mqttClient.subscribe("friendradio/control");
+          mqttClient.subscribe("friendradio/state/#");
 
-          // Start Presence Beacon Heartbeat (every 12 seconds)
           if (heartbeatInterval) clearInterval(heartbeatInterval);
           heartbeatInterval = setInterval(sendPresenceHeartbeat, 12000);
           sendPresenceHeartbeat();
@@ -1253,6 +1350,7 @@
 
     function sendBuzzAlert(target) {
       playChirp("buzz");
+      triggerHaptic([100, 50, 100]);
       sendPushAlert(target, `⚡ BUZZ ALERT`, `${myDisplayName} is alerting you!`);
       const topic = target === "talkall" ? `friendradio/channel/${activeChannel}` : `friendradio/direct/${target}`;
       const msg = new Paho.MQTT.Message(JSON.stringify({
@@ -1293,13 +1391,28 @@
       log(`⚙️ Admin Command Broadcasted: ${cmd}`);
     }
 
+    function broadcastLineState(isBusy) {
+      if (!mqttClient || !mqttClient.isConnected()) return;
+      const statePayload = new Paho.MQTT.Message(JSON.stringify({
+        type: "LINE_STATE",
+        sender: myId,
+        senderName: myDisplayName,
+        isBusy: isBusy,
+        channel: activeChannel
+      }));
+      statePayload.destinationName = `friendradio/state/${activeChannel}`;
+      mqttClient.send(statePayload);
+    }
+
     function startTransmit() {
-      if (!isPoweredOn || isTransmitting || !micStream) return;
+      if (!isPoweredOn || isTransmitting || !micStream || isChannelLocked) return;
       isTransmitting = true;
       audioChunks = [];
       getAudioContext();
       playChirp("roger");
+      triggerHaptic([60]);
 
+      broadcastLineState(true);
       sendPushAlert(selectedTarget, `🚨 FRIEND RADIO TRANSMISSION`, `${myDisplayName} speaking...`);
 
       pttBtn.classList.add("active");
@@ -1312,8 +1425,7 @@
         if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = "";
       }
 
-      const streamToRecord = micStream;
-      mediaRecorder = new MediaRecorder(streamToRecord, { audioBitsPerSecond: 12000 });
+      mediaRecorder = new MediaRecorder(micStream, { audioBitsPerSecond: 12000 });
 
       mediaRecorder.ondataavailable = (e) => {
         if (e.data && e.data.size > 0) audioChunks.push(e.data);
@@ -1347,6 +1459,9 @@
       if (!isTransmitting) return;
       isTransmitting = false;
 
+      triggerHaptic([30]);
+      broadcastLineState(false);
+
       if (mediaRecorder && mediaRecorder.state !== "inactive") mediaRecorder.stop();
 
       pttBtn.classList.remove("active");
@@ -1376,24 +1491,41 @@
           return;
         }
 
+        // Busy Line Lockout Interlock
+        if (payload.type === "LINE_STATE") {
+          if (payload.isBusy) {
+            isChannelLocked = true;
+            pttBtn.classList.add("busy-locked");
+            pttTargetLabel.innerText = `BUSY: ${payload.senderName.toUpperCase()}`;
+          } else {
+            isChannelLocked = false;
+            pttBtn.classList.remove("busy-locked");
+            pttTargetLabel.innerText = selectedTarget === "talkall" ? "TALK ALL" : (userMap[selectedTarget] || selectedTarget).toUpperCase();
+          }
+          return;
+        }
+
         // Admin Mesh Commands
         if (payload.type === "ADMIN_COMMAND") {
           if (payload.cmd === "ALL_CALL_SIREN") {
             playChirp("siren");
+            triggerHaptic([200, 100, 200, 100, 400]);
             alert(`🚨 EMERGENCY ALL-CALL SIREN:\n\n${payload.reason}`);
           } else if (payload.cmd === "FORCE_CLEAR") {
             stopTransmit();
+            isChannelLocked = false;
+            pttBtn.classList.remove("busy-locked");
             log("⚡ Line forced clear by Admin.");
           }
           return;
         }
 
-        // Check if user is muted locally
         if (mutedUsers.has(payload.sender)) return;
 
         // Buzz Ring Alerts
         if (payload.type === "BUZZ_ALERT") {
           playChirp("buzz");
+          triggerHaptic([150, 80, 150]);
           log(`⚡ BUZZ from ${payload.senderName}!`);
           return;
         }
@@ -1401,6 +1533,7 @@
         // Direct Text Messages
         if (payload.type === "TEXT_MESSAGE") {
           playChirp("roger");
+          triggerHaptic([50, 50]);
           const directTag = payload.target === "talkall" ? "📢 [ALL]" : "🔒 [DIRECT]";
           log(`${directTag} 💬 ${payload.senderName}: "${payload.text}"`);
 
@@ -1420,6 +1553,7 @@
           statusBadge.className = "status-badge rx";
           log(`${callType} Voice: ${payload.senderName}`);
           
+          triggerHaptic([80]);
           playChirp("roger");
           playVoicePayload(payload.data);
         }
@@ -1440,9 +1574,9 @@
           filter.frequency.value = 2200;
           filter.gain.value = 4;
           source.connect(filter);
-          filter.connect(ctx.destination);
+          filter.connect(masterGainNode);
         } else {
-          source.connect(ctx.destination);
+          source.connect(masterGainNode);
         }
         
         source.onended = () => {
