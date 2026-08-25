@@ -239,7 +239,6 @@
       cursor: pointer;
     }
 
-    /* Volume Boost Controller Row */
     .vol-control-row {
       display: flex;
       align-items: center;
@@ -380,7 +379,6 @@
       transition: width 0.05s ease;
     }
 
-    /* Soundboard Quick Response Row */
     .soundboard-row {
       width: 100%;
       max-width: 400px;
@@ -409,7 +407,6 @@
       transform: scale(0.95);
     }
 
-    /* PTT Area */
     .ptt-container {
       display: flex;
       align-items: center;
@@ -463,7 +460,6 @@
     }
     .ptt-btn.active svg { transform: scale(0.92); fill: #fee2e2; }
 
-    /* Channel Busy Lockout Styling */
     .ptt-btn.busy-locked {
       border-color: #f59e0b;
       background: radial-gradient(circle at 35% 35%, #b45309 0%, #78350f 100%);
@@ -537,7 +533,6 @@
       line-height: 1.3;
     }
 
-    /* Modals */
     .modal-overlay {
       display: none;
       position: fixed;
@@ -901,8 +896,14 @@
     const urlParams = new URLSearchParams(window.location.search);
     const urlUser = urlParams.get("user");
     
-    let myId = urlUser || localStorage.getItem("fr_my_id") || "laptop";
-    if (urlUser) localStorage.setItem("fr_my_id", myId);
+    // Strict priority: URL parameter always overrides and saves
+    let myId = "laptop";
+    if (urlUser && userMap[urlUser]) {
+      myId = urlUser;
+      localStorage.setItem("fr_my_id", myId);
+    } else if (localStorage.getItem("fr_my_id")) {
+      myId = localStorage.getItem("fr_my_id");
+    }
 
     const myDisplayName = userMap[myId] || "Authorized User";
     document.getElementById("userTag").innerText = `🌴 ${myDisplayName.toUpperCase()}`;
@@ -913,8 +914,11 @@
       document.getElementById("adminOpenBtn").style.display = "inline-flex";
     }
 
+    // Auto-update Service Worker to bypass aggressive PWA cache locks
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js').catch(() => {});
+      navigator.serviceWorker.register('sw.js?v=2026.08.25').then(reg => {
+        reg.update();
+      }).catch(() => {});
     }
 
     // State Variables
@@ -968,14 +972,12 @@
     const adminModal = document.getElementById("adminModal");
     const adminUserList = document.getElementById("adminUserList");
 
-    // Haptic Vibration Helper
     function triggerHaptic(pattern = [40]) {
       if ("vibrate" in navigator) {
         try { navigator.vibrate(pattern); } catch (e) {}
       }
     }
 
-    // Sunset Countdown Calculator for Madeira Beach / St Pete Beach
     function updateSunsetCountdown() {
       const now = new Date();
       const sunset = new Date();
@@ -993,7 +995,6 @@
     updateSunsetCountdown();
     setInterval(updateSunsetCountdown, 60000);
 
-    // Volume Gain Slider Controller
     volBoostSlider.addEventListener("input", (e) => {
       const val = parseFloat(e.target.value);
       volBoostLabel.innerText = Math.round(val * 100) + "%";
@@ -1002,7 +1003,6 @@
       }
     });
 
-    // Channel Switching
     document.querySelectorAll(".tab-btn").forEach(btn => {
       btn.addEventListener("click", () => {
         document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
@@ -1015,7 +1015,6 @@
       });
     });
 
-    // Radar Modal
     radarOpenBtn.addEventListener("click", () => {
       radarFrame.src = "https://www.rainviewer.com/map.html?loc=27.7253,-82.7412,10&oCS=1&c=1&o=83&lm=1&layer=radar&sm=1&sn=1";
       radarModal.classList.add("open");
@@ -1025,7 +1024,6 @@
       radarFrame.src = "";
     });
 
-    // Admin Modal & Dynamic Management
     if (isAdmin) {
       adminOpenBtn.addEventListener("click", () => {
         adminUserList.innerHTML = "";
@@ -1085,10 +1083,14 @@
       }
     };
 
-    // Contacts Selection & Buzz/Message Actions
+    // Contacts Selection & Visibility Gating
     contactCards.forEach(card => {
       const target = card.getAttribute("data-target");
-      if (target === myId) card.style.display = "none";
+      if (target === myId) {
+        card.style.display = "none";
+      } else {
+        card.style.display = "flex";
+      }
 
       const selectBtn = card.querySelector(".contact-btn");
       selectBtn.addEventListener("click", () => {
@@ -1127,7 +1129,6 @@
       });
     });
 
-    // Quick Canned Soundboard Broadcaster
     window.sendQuickSound = function(phrase) {
       if (!isPoweredOn) return alert("Power on the radio first.");
       sendDirectTextMessage(selectedTarget, `⚡ [QUICK MSG]: ${phrase}`);
@@ -1135,14 +1136,12 @@
       triggerHaptic([30, 50, 30]);
     };
 
-    // Vocal Wind & Bandpass Filter Toggle
     filterBtn.addEventListener("click", () => {
       isFilterActive = !isFilterActive;
       filterLabel.innerText = isFilterActive ? "EQ: ON" : "EQ: OFF";
       log(isFilterActive ? "Vocal clarity wind filter ENABLED" : "Vocal filter BYPASSED");
     });
 
-    // Replay Last Transmission
     replayBtn.addEventListener("click", () => {
       if (!lastVoiceBase64) return alert("No incoming call to replay.");
       log("🔁 Replaying last transmission...");
@@ -1180,7 +1179,6 @@
       }).catch(() => {});
     }
 
-    // Audio Sound FX (Nextel Chirps & Alerts)
     function playChirp(type = "roger") {
       try {
         const ctx = getAudioContext();
@@ -1490,7 +1488,6 @@
         const payload = JSON.parse(message.payloadString);
         if (payload.sender === myId || payload.userId === myId) return;
 
-        // Presence Heartbeat Update
         if (message.destinationName === "friendradio/presence") {
           const uId = payload.userId;
           const dot = document.getElementById(`dot-${uId}`);
@@ -1506,7 +1503,6 @@
           return;
         }
 
-        // Busy Line Lockout Interlock
         if (payload.type === "LINE_STATE") {
           if (payload.isBusy) {
             isChannelLocked = true;
@@ -1520,7 +1516,6 @@
           return;
         }
 
-        // Admin Mesh Commands
         if (payload.type === "ADMIN_COMMAND") {
           if (payload.cmd === "ALL_CALL_SIREN") {
             playChirp("siren");
@@ -1537,7 +1532,6 @@
 
         if (mutedUsers.has(payload.sender)) return;
 
-        // Buzz Ring Alerts
         if (payload.type === "BUZZ_ALERT") {
           playChirp("buzz");
           triggerHaptic([150, 80, 150]);
@@ -1545,7 +1539,6 @@
           return;
         }
 
-        // Direct Text Messages
         if (payload.type === "TEXT_MESSAGE") {
           playChirp("roger");
           triggerHaptic([50, 50]);
@@ -1560,7 +1553,6 @@
           return;
         }
 
-        // Live PTT Voice Transmissions
         if (payload.type === "VOICE_TRANSMISSION") {
           lastVoiceBase64 = payload.data;
           const callType = payload.target === "talkall" ? "📢 [ALL]" : "🔒 [DIRECT]";
