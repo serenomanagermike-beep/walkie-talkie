@@ -19,7 +19,10 @@
   <link rel="apple-touch-icon" href="icon-192.png">
   <link rel="manifest" href="manifest.json">
 
+  <!-- MQTT & Leaflet Map Engine -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700;800&family=Inter:wght@500;700;900&display=swap');
@@ -533,6 +536,7 @@
       line-height: 1.3;
     }
 
+    /* Modals */
     .modal-overlay {
       display: none;
       position: fixed;
@@ -605,6 +609,36 @@
       cursor: pointer;
     }
     .admin-btn.danger { border-color: #f87171; color: #fca5a5; }
+
+    /* Custom Leaflet Map Pin Styling */
+    .crew-pin {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #0284c7;
+      color: #ffffff;
+      border: 2px solid #fef08a;
+      border-radius: 50%;
+      font-family: 'Chakra Petch', sans-serif;
+      font-size: 0.65rem;
+      font-weight: 800;
+      box-shadow: 0 0 10px rgba(56, 189, 248, 0.8);
+      text-align: center;
+    }
+    .crew-pin.me {
+      background: #10b981;
+      border-color: #ffffff;
+    }
+    .leaflet-popup-content-wrapper {
+      background: #082f49;
+      color: #ffffff;
+      border: 1px solid #38bdf8;
+      font-family: 'Chakra Petch', sans-serif;
+      font-size: 0.75rem;
+    }
+    .leaflet-popup-tip {
+      background: #082f49;
+    }
   </style>
 </head>
 <body>
@@ -849,16 +883,17 @@
 
   <audio id="keepAliveAudio" loop playsinline src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAP8A/w=="></audio>
 
-  <!-- Live Radar Modal -->
+  <!-- Live Crew Radar GPS Modal -->
   <div id="radarModal" class="modal-overlay">
     <div class="modal-card">
       <div class="modal-header">
-        <h3>ST. PETE BEACH LIVE RADAR</h3>
-        <button id="radarCloseBtn" class="close-modal-btn">CLOSE</button>
+        <h3>📡 LIVE CREW GPS RADAR</h3>
+        <div style="display:flex; gap:6px;">
+          <button id="radarCenterBtn" class="close-modal-btn" style="background:#0284c7;">🎯 ME</button>
+          <button id="radarCloseBtn" class="close-modal-btn">CLOSE</button>
+        </div>
       </div>
-      <div style="width: 100%; height: 380px; background: #000;">
-        <iframe id="radarFrame" src="" allowfullscreen style="width:100%; height:100%; border:none;"></iframe>
-      </div>
+      <div id="crewMap" style="width: 100%; height: 380px; background: #082f49;"></div>
     </div>
   </div>
 
@@ -909,14 +944,13 @@
     const myDisplayName = userMap[myId] || "Authorized User";
     document.getElementById("userTag").innerText = `🌴 ${myDisplayName.toUpperCase()}`;
 
-    // Admin Verification (laptop or mikey get master admin controls)
     const isAdmin = (myId === "laptop" || myId === "mikey");
     if (isAdmin) {
       document.getElementById("adminOpenBtn").style.display = "inline-flex";
     }
 
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js?v=2026.08.25-4').then(reg => {
+      navigator.serviceWorker.register('sw.js?v=2026.08.25-5').then(reg => {
         reg.update();
       }).catch(() => {});
     }
@@ -945,6 +979,11 @@
     const mutedUsers = new Set();
     const hiddenUsers = new Set();
 
+    // Live GPS & Map State
+    let myCoords = null;
+    let crewMap = null;
+    const crewMarkers = {};
+
     // Elements
     const powerBtn = document.getElementById("powerBtn");
     const pttBtn = document.getElementById("pttButton");
@@ -965,8 +1004,8 @@
     // Modal Elements
     const radarOpenBtn = document.getElementById("radarOpenBtn");
     const radarCloseBtn = document.getElementById("radarCloseBtn");
+    const radarCenterBtn = document.getElementById("radarCenterBtn");
     const radarModal = document.getElementById("radarModal");
-    const radarFrame = document.getElementById("radarFrame");
     const adminOpenBtn = document.getElementById("adminOpenBtn");
     const adminCloseBtn = document.getElementById("adminCloseBtn");
     const adminModal = document.getElementById("adminModal");
@@ -1015,14 +1054,90 @@
       });
     });
 
+    // Geolocation Tracker
+    function updateLocation() {
+      if ('geolocation' in navigator) {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            myCoords = {
+              lat: pos.coords.latitude,
+              lng: pos.coords.longitude
+            };
+            sendPresenceHeartbeat();
+            if (crewMap) {
+              updateCrewMarker(myId, `${myDisplayName} (You)`, myCoords, userStatusSelect.value, true);
+            }
+          },
+          (err) => {},
+          { enableHighAccuracy: true, timeout: 8000 }
+        );
+      }
+    }
+
+    // Leaflet Live Crew Radar Initializer
     radarOpenBtn.addEventListener("click", () => {
-      radarFrame.src = "https://www.rainviewer.com/map.html?loc=27.7253,-82.7412,10&oCS=1&c=1&o=83&lm=1&layer=radar&sm=1&sn=1";
       radarModal.classList.add("open");
+      updateLocation();
+
+      setTimeout(() => {
+        if (!crewMap) {
+          // Default Madeira Beach / St. Pete Beach View
+          crewMap = L.map('crewMap').setView([27.79, -82.79], 12);
+
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap'
+          }).addTo(crewMap);
+        }
+        crewMap.invalidateSize();
+
+        if (myCoords) {
+          crewMap.setView([myCoords.lat, myCoords.lng], 14);
+          updateCrewMarker(myId, `${myDisplayName} (You)`, myCoords, userStatusSelect.value, true);
+        }
+      }, 200);
     });
+
     radarCloseBtn.addEventListener("click", () => {
       radarModal.classList.remove("open");
-      radarFrame.src = "";
     });
+
+    radarCenterBtn.addEventListener("click", () => {
+      if (myCoords && crewMap) {
+        crewMap.setView([myCoords.lat, myCoords.lng], 15);
+      } else {
+        updateLocation();
+      }
+    });
+
+    function updateCrewMarker(uId, name, coords, status, isSelf = false) {
+      if (!coords || !coords.lat || !coords.lng || !crewMap) return;
+
+      const initials = name.split(" ").map(n => n[0]).join("").substring(0, 2).toUpperCase();
+      const customIcon = L.divIcon({
+        className: `crew-pin ${isSelf ? 'me' : ''}`,
+        html: `<span>${initials}</span>`,
+        iconSize: [28, 28],
+        iconAnchor: [14, 14]
+      });
+
+      const popupHtml = `
+        <div style="font-size:0.75rem; text-align:center;">
+          <b style="color:#fef08a;">${name}</b><br>
+          <span>Status: ${status || 'Active'}</span><br>
+          <span style="font-size:0.6rem; color:#bae6fd;">Lat: ${coords.lat.toFixed(4)}, Lng: ${coords.lng.toFixed(4)}</span>
+        </div>
+      `;
+
+      if (crewMarkers[uId]) {
+        crewMarkers[uId].setLatLng([coords.lat, coords.lng]);
+        crewMarkers[uId].setIcon(customIcon);
+        crewMarkers[uId].setPopupContent(popupHtml);
+      } else {
+        crewMarkers[uId] = L.marker([coords.lat, coords.lng], { icon: customIcon })
+          .addTo(crewMap)
+          .bindPopup(popupHtml);
+      }
+    }
 
     if (isAdmin) {
       adminOpenBtn.addEventListener("click", () => {
@@ -1244,6 +1359,7 @@
 
         try {
           await requestWakeLock();
+          updateLocation();
 
           micStream = await navigator.mediaDevices.getUserMedia({
             audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
@@ -1344,6 +1460,7 @@
         userId: myId,
         userName: myDisplayName,
         status: userStatusSelect.value,
+        coords: myCoords,
         timestamp: Date.now()
       }));
       payload.destinationName = "friendradio/presence";
@@ -1499,6 +1616,7 @@
         const payload = JSON.parse(message.payloadString);
         if (payload.sender === myId || payload.userId === myId) return;
 
+        // Presence Heartbeat & Live GPS Pin Placement
         if (message.destinationName === "friendradio/presence") {
           const uId = payload.userId;
           const dot = document.getElementById(`dot-${uId}`);
@@ -1506,10 +1624,19 @@
           if (dot) dot.className = "presence-dot online";
           if (tag) tag.innerText = payload.status || "Online";
 
+          // Update Leaflet marker on radar
+          if (payload.coords && payload.coords.lat && payload.coords.lng) {
+            updateCrewMarker(uId, payload.userName || userMap[uId] || uId, payload.coords, payload.status);
+          }
+
           clearTimeout(presenceTimers[uId]);
           presenceTimers[uId] = setTimeout(() => {
             if (dot) dot.className = "presence-dot";
             if (tag) tag.innerText = "Offline";
+            if (crewMarkers[uId] && crewMap) {
+              crewMap.removeLayer(crewMarkers[uId]);
+              delete crewMarkers[uId];
+            }
           }, 35000);
           return;
         }
@@ -1629,16 +1756,13 @@
       return bytes.buffer;
     }
 
-    // Power Toggle
     powerBtn.addEventListener("click", togglePower);
 
-    // Standard On-Screen Touch / Mouse Events
     pttBtn.addEventListener("touchstart", (e) => { e.preventDefault(); startTransmit(); });
     pttBtn.addEventListener("touchend", (e) => { e.preventDefault(); stopTransmit(); });
     pttBtn.addEventListener("mousedown", startTransmit);
     pttBtn.addEventListener("mouseup", stopTransmit);
 
-    // Physical Hardware Button Triggers (Volume UP, Spacebar, Headset Action)
     window.addEventListener("keydown", (e) => {
       const isInputActive = document.activeElement && (document.activeElement.tagName === "INPUT" || document.activeElement.tagName === "TEXTAREA");
       if (isInputActive) return;
@@ -1659,7 +1783,6 @@
       }
     });
 
-    // Bluetooth Headset / Earbud Play-Pause Media Intercept
     if ('mediaSession' in navigator) {
       navigator.mediaSession.setActionHandler('play', () => {
         if (!isTransmitting) startTransmit();
