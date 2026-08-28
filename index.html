@@ -756,17 +756,17 @@
       </div>
 
       <!-- Crew Members -->
-      <div class="contact-card" data-target="karl">
+      <div class="contact-card" data-target="karlwithak">
         <button class="contact-btn">
-          <span class="presence-dot" id="dot-karl"></span>
+          <span class="presence-dot" id="dot-karlwithak"></span>
           <div>
-            <span>KARL</span>
-            <span class="contact-status-tag" id="status-karl">Offline</span>
+            <span>KARL WITH A K</span>
+            <span class="contact-status-tag" id="status-karlwithak">Offline</span>
           </div>
         </button>
         <div class="contact-actions">
-          <button class="buzz-btn" title="Buzz Karl">⚡</button>
-          <button class="msg-btn" title="Message Karl">💬</button>
+          <button class="buzz-btn" title="Buzz Karl with a K">⚡</button>
+          <button class="msg-btn" title="Message Karl with a K">💬</button>
         </div>
       </div>
 
@@ -922,7 +922,7 @@
       "mikey": "Mikey (Personal)",
       "work": "Work Phone",
       "laptop": "Laptop",
-      "karl": "Karl",
+      "karlwithak": "Karl with a K",
       "jim": "California Jim",
       "edd": "Edd",
       "matt": "Minnesota Matt",
@@ -950,7 +950,7 @@
     }
 
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js?v=2026.08.25-5').then(reg => {
+      navigator.serviceWorker.register('sw.js?v=2026.08.28-1').then(reg => {
         reg.update();
       }).catch(() => {});
     }
@@ -975,6 +975,7 @@
     let isChannelLocked = false;
     let wakeLock = null;
     let lastVoiceBase64 = null;
+    let gpsWatchId = null;
     const presenceTimers = {};
     const mutedUsers = new Set();
     const hiddenUsers = new Set();
@@ -1054,7 +1055,7 @@
       });
     });
 
-    // Geolocation Tracker
+    // Geolocation Tracker (Continuous & On-Demand)
     function updateLocation() {
       if ('geolocation' in navigator) {
         navigator.geolocation.getCurrentPosition(
@@ -1068,8 +1069,28 @@
               updateCrewMarker(myId, `${myDisplayName} (You)`, myCoords, userStatusSelect.value, true);
             }
           },
-          (err) => {},
-          { enableHighAccuracy: true, timeout: 8000 }
+          (err) => {
+            log("⚠️ GPS Permission needed for Radar pin.");
+          },
+          { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
+      }
+    }
+
+    function startGpsTracking() {
+      if ('geolocation' in navigator && !gpsWatchId) {
+        gpsWatchId = navigator.geolocation.watchPosition(
+          (pos) => {
+            myCoords = {
+              lat: pos.coords.latitude,
+              lng: pos.coords.longitude
+            };
+            if (crewMap) {
+              updateCrewMarker(myId, `${myDisplayName} (You)`, myCoords, userStatusSelect.value, true);
+            }
+          },
+          () => {},
+          { enableHighAccuracy: true, maximumAge: 5000 }
         );
       }
     }
@@ -1081,7 +1102,6 @@
 
       setTimeout(() => {
         if (!crewMap) {
-          // Default Madeira Beach / St. Pete Beach View
           crewMap = L.map('crewMap').setView([27.79, -82.79], 12);
 
           L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -1360,6 +1380,7 @@
         try {
           await requestWakeLock();
           updateLocation();
+          startGpsTracking();
 
           micStream = await navigator.mediaDevices.getUserMedia({
             audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
@@ -1474,6 +1495,10 @@
 
     function shutdownRadio() {
       if (wakeLock) { wakeLock.release().catch(() => {}); wakeLock = null; }
+      if (gpsWatchId && 'geolocation' in navigator) {
+        navigator.geolocation.clearWatch(gpsWatchId);
+        gpsWatchId = null;
+      }
       try { keepAliveAudio.pause(); } catch(e) {}
       if (heartbeatInterval) clearInterval(heartbeatInterval);
       if (meterInterval) clearInterval(meterInterval);
@@ -1702,6 +1727,8 @@
 
           if (myId === "davey") {
             speakPhrase("Hell yeah!");
+          } else if (myId === "karlwithak") {
+            speakPhrase("Karl with a K");
           } else {
             playChirp("roger");
           }
