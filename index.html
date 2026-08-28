@@ -644,6 +644,12 @@
       background: #10b981;
       border-color: #ffffff;
     }
+    .crew-pin.offline {
+      background: #475569;
+      border-color: #94a3b8;
+      opacity: 0.75;
+      box-shadow: none;
+    }
     .leaflet-popup-content-wrapper {
       background: #082f49;
       color: #ffffff;
@@ -968,7 +974,7 @@
     }
 
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js?v=2026.08.28-2').then(reg => {
+      navigator.serviceWorker.register('sw.js?v=2026.08.28-3').then(reg => {
         reg.update();
       }).catch(() => {});
     }
@@ -997,6 +1003,13 @@
     const presenceTimers = {};
     const mutedUsers = new Set();
     const hiddenUsers = new Set();
+
+    // Last Seen Tracking Data Store
+    let userPresenceHistory = {};
+    try {
+      const stored = localStorage.getItem("fr_presence_history");
+      if (stored) userPresenceHistory = JSON.parse(stored);
+    } catch(e) {}
 
     // Live GPS & Map State
     let myCoords = null;
@@ -1054,6 +1067,41 @@
     updateSunsetCountdown();
     setInterval(updateSunsetCountdown, 60000);
 
+    // Format Relative Time (e.g., "3m ago", "2h ago", or formatted clock time)
+    function formatTimeAgo(timestamp) {
+      if (!timestamp) return "Offline";
+      const diffMs = Date.now() - timestamp;
+      const mins = Math.floor(diffMs / 60000);
+      if (mins < 1) return "Just now";
+      if (mins < 60) return `${mins}m ago`;
+      const hours = Math.floor(mins / 60);
+      if (hours < 24) return `${hours}h ago`;
+      const d = new Date(timestamp);
+      return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    }
+
+    // Refresh Last Seen Labels Every 15 seconds
+    function refreshPresenceDisplay() {
+      Object.keys(userMap).forEach(uId => {
+        if (uId === myId) return;
+        const dot = document.getElementById(`dot-${uId}`);
+        const tag = document.getElementById(`status-${uId}`);
+        if (!tag) return;
+
+        const isCurrentlyOnline = dot && dot.classList.contains("online");
+        if (!isCurrentlyOnline) {
+          const lastInfo = userPresenceHistory[uId];
+          if (lastInfo && lastInfo.lastSeen) {
+            tag.innerText = `Seen ${formatTimeAgo(lastInfo.lastSeen)}`;
+          } else {
+            tag.innerText = "Offline";
+          }
+        }
+      });
+    }
+    refreshPresenceDisplay();
+    setInterval(refreshPresenceDisplay, 15000);
+
     volBoostSlider.addEventListener("input", (e) => {
       const val = parseFloat(e.target.value);
       volBoostLabel.innerText = Math.round(val * 100) + "%";
@@ -1085,7 +1133,7 @@
             };
             sendPresenceHeartbeat();
             if (crewMap) {
-              updateCrewMarker(myId, `${myDisplayName} (You)`, myCoords, userStatusSelect.value, true);
+              updateCrewMarker(myId, `${myDisplayName} (You)`, myCoords, userStatusSelect.value, true, true);
             }
           },
           (err) => {
@@ -1105,7 +1153,7 @@
               lng: pos.coords.longitude
             };
             if (crewMap) {
-              updateCrewMarker(myId, `${myDisplayName} (You)`, myCoords, userStatusSelect.value, true);
+              updateCrewMarker(myId, `${myDisplayName} (You)`, myCoords, userStatusSelect.value, true, true);
             }
           },
           () => {},
@@ -1126,12 +1174,22 @@
           L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap'
           }).addTo(crewMap);
+
+          // Restore last known positions for offline members
+          Object.keys(userPresenceHistory).forEach(uId => {
+            if (uId === myId) return;
+            const h = userPresenceHistory[uId];
+            if (h.coords) {
+              const isLive = presenceTimers[uId] !== undefined;
+              updateCrewMarker(uId, userMap[uId] || uId, h.coords, h.status || 'Offline', false, isLive, h.lastSeen);
+            }
+          });
         }
         crewMap.invalidateSize();
 
         if (myCoords) {
           crewMap.setView([myCoords.lat, myCoords.lng], 14);
-          updateCrewMarker(myId, `${myDisplayName} (You)`, myCoords, userStatusSelect.value, true);
+          updateCrewMarker(myId, `${myDisplayName} (You)`, myCoords, userStatusSelect.value, true, true);
         }
       }, 200);
     });
@@ -1148,21 +1206,27 @@
       }
     });
 
-    function updateCrewMarker(uId, name, coords, status, isSelf = false) {
+    function updateCrewMarker(uId, name, coords, status, isSelf = false, isOnline = true, lastSeenTime = null) {
       if (!coords || !coords.lat || !coords.lng || !crewMap) return;
 
       const initials = name.split(" ").map(n => n[0]).join("").substring(0, 2).toUpperCase();
+      let pinClass = `crew-pin ${isSelf ? 'me' : ''}`;
+      if (!isOnline && !isSelf) pinClass += ' offline';
+
       const customIcon = L.divIcon({
-        className: `crew-pin ${isSelf ? 'me' : ''}`,
+        className: pinClass,
         html: `<span>${initials}</span>`,
         iconSize: [28, 28],
         iconAnchor: [14, 14]
       });
 
+      const timeLabel = isOnline ? '<span style="color:#22c55e;">● Live Online</span>' : `<span style="color:#94a3b8;">Offline (${formatTimeAgo(lastSeenTime)})</span>`;
+
       const popupHtml = `
         <div style="font-size:0.75rem; text-align:center;">
           <b style="color:#fef08a;">${name}</b><br>
           <span>Status: ${status || 'Active'}</span><br>
+          <span>${timeLabel}</span><br>
           <span style="font-size:0.6rem; color:#bae6fd;">Lat: ${coords.lat.toFixed(4)}, Lng: ${coords.lng.toFixed(4)}</span>
         </div>
       `;
@@ -1318,7 +1382,7 @@
       return audioContext;
     }
 
-    // Screen Keep-Awake Logic (WakeLock API + Video Canvas Stream Loop)
+    // Screen Keep-Awake Logic
     async function requestWakeLock() {
       try {
         if ('wakeLock' in navigator && isPoweredOn) {
@@ -1699,7 +1763,7 @@
         const payload = JSON.parse(message.payloadString);
         if (payload.sender === myId || payload.userId === myId) return;
 
-        // Presence Heartbeat & Live GPS Pin Placement
+        // Presence Heartbeat & Live GPS Pin Placement with Last-Seen Stamping
         if (message.destinationName === "friendradio/presence") {
           const uId = payload.userId;
           const dot = document.getElementById(`dot-${uId}`);
@@ -1707,19 +1771,29 @@
           if (dot) dot.className = "presence-dot online";
           if (tag) tag.innerText = payload.status || "Online";
 
+          // Record last-seen timestamp & coords
+          userPresenceHistory[uId] = {
+            lastSeen: Date.now(),
+            status: payload.status,
+            coords: payload.coords
+          };
+          try { localStorage.setItem("fr_presence_history", JSON.stringify(userPresenceHistory)); } catch(e) {}
+
           // Update Leaflet marker on radar
           if (payload.coords && payload.coords.lat && payload.coords.lng) {
-            updateCrewMarker(uId, payload.userName || userMap[uId] || uId, payload.coords, payload.status);
+            updateCrewMarker(uId, payload.userName || userMap[uId] || uId, payload.coords, payload.status, false, true);
           }
 
           clearTimeout(presenceTimers[uId]);
           presenceTimers[uId] = setTimeout(() => {
             if (dot) dot.className = "presence-dot";
-            if (tag) tag.innerText = "Offline";
-            if (crewMarkers[uId] && crewMap) {
-              crewMap.removeLayer(crewMarkers[uId]);
-              delete crewMarkers[uId];
+            if (tag) tag.innerText = `Seen ${formatTimeAgo(userPresenceHistory[uId]?.lastSeen || Date.now())}`;
+            
+            // Mark marker as offline on map without removing location pin
+            if (crewMarkers[uId] && userPresenceHistory[uId]?.coords) {
+              updateCrewMarker(uId, userMap[uId] || uId, userPresenceHistory[uId].coords, "Offline", false, false, userPresenceHistory[uId].lastSeen);
             }
+            delete presenceTimers[uId];
           }, 35000);
           return;
         }
