@@ -299,18 +299,28 @@
       background: transparent;
       border: none;
       color: #e0f2fe;
-      padding: 5px 6px;
+      padding: 4px 5px;
       font-family: 'Chakra Petch', sans-serif;
-      font-size: 0.68rem;
-      font-weight: 700;
       cursor: pointer;
       display: flex;
       align-items: center;
-      gap: 5px;
+      gap: 4px;
       text-align: left;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      min-width: 0;
+    }
+    .contact-info-wrap {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      flex: 1;
+    }
+    .contact-name-tag {
+      font-size: 0.64rem;
+      font-weight: 700;
+      line-height: 1.15;
+      white-space: normal;
+      word-break: break-word;
+      display: block;
     }
     .presence-dot {
       width: 7px;
@@ -325,10 +335,15 @@
       box-shadow: 0 0 6px #22c55e;
     }
     .contact-status-tag {
-      font-size: 0.58rem;
+      font-size: 0.55rem;
       color: #fef08a;
       display: block;
       font-weight: 600;
+      line-height: 1.1;
+      margin-top: 1px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .contact-actions {
@@ -339,9 +354,9 @@
       background: rgba(0, 0, 0, 0.25);
       border: none;
       color: #fef08a;
-      padding: 0 5px;
+      padding: 0 4px;
       cursor: pointer;
-      font-size: 0.72rem;
+      font-size: 0.7rem;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -704,7 +719,9 @@
       <div class="contact-card talkall active" data-target="talkall">
         <button class="contact-btn">
           <span class="presence-dot online"></span>
-          <span>📢 TALK ALL (BROADCAST)</span>
+          <div class="contact-info-wrap">
+            <span class="contact-name-tag">📢 TALK ALL (BROADCAST)</span>
+          </div>
         </button>
         <div class="contact-actions">
           <button class="buzz-btn" title="Alert All">⚡</button>
@@ -716,8 +733,8 @@
       <div class="contact-card" data-target="mikey">
         <button class="contact-btn">
           <span class="presence-dot" id="dot-mikey"></span>
-          <div>
-            <span>MIKEY (PERSONAL)</span>
+          <div class="contact-info-wrap">
+            <span class="contact-name-tag">MIKEY (PERSONAL)</span>
             <span class="contact-status-tag" id="status-mikey">Offline</span>
           </div>
         </button>
@@ -730,8 +747,8 @@
       <div class="contact-card" data-target="work">
         <button class="contact-btn">
           <span class="presence-dot" id="dot-work"></span>
-          <div>
-            <span>WORK PHONE</span>
+          <div class="contact-info-wrap">
+            <span class="contact-name-tag">WORK PHONE</span>
             <span class="contact-status-tag" id="status-work">Offline</span>
           </div>
         </button>
@@ -744,8 +761,8 @@
       <div class="contact-card" data-target="laptop">
         <button class="contact-btn">
           <span class="presence-dot" id="dot-laptop"></span>
-          <div>
-            <span>LAPTOP</span>
+          <div class="contact-info-wrap">
+            <span class="contact-name-tag">LAPTOP</span>
             <span class="contact-status-tag" id="status-laptop">Offline</span>
           </div>
         </button>
@@ -759,8 +776,8 @@
       <div class="contact-card" data-target="karlwithak">
         <button class="contact-btn">
           <span class="presence-dot" id="dot-karlwithak"></span>
-          <div>
-            <span>KARL WITH A K</span>
+          <div class="contact-info-wrap">
+            <span class="contact-name-tag">KARL WITH A K</span>
             <span class="contact-status-tag" id="status-karlwithak">Offline</span>
           </div>
         </button>
@@ -773,8 +790,8 @@
       <div class="contact-card" data-target="jim">
         <button class="contact-btn">
           <span class="presence-dot" id="dot-jim"></span>
-          <div>
-            <span>CALIFORNIA JIM</span>
+          <div class="contact-info-wrap">
+            <span class="contact-name-tag">CALIFORNIA JIM</span>
             <span class="contact-status-tag" id="status-jim">Offline</span>
           </div>
         </button>
@@ -787,8 +804,8 @@
       <div class="contact-card" data-target="edd">
         <button class="contact-btn">
           <span class="presence-dot" id="dot-edd"></span>
-          <div>
-            <span>EDD</span>
+          <div class="contact-info-wrap">
+            <span class="contact-name-tag">EDD</span>
             <span class="contact-status-tag" id="status-edd">Offline</span>
           </div>
         </button>
@@ -801,8 +818,8 @@
       <div class="contact-card" data-target="matt">
         <button class="contact-btn">
           <span class="presence-dot" id="dot-matt"></span>
-          <div>
-            <span>MINNESOTA MATT</span>
+          <div class="contact-info-wrap">
+            <span class="contact-name-tag">MINNESOTA MATT</span>
             <span class="contact-status-tag" id="status-matt">Offline</span>
           </div>
         </button>
@@ -815,8 +832,8 @@
       <div class="contact-card" data-target="davey">
         <button class="contact-btn">
           <span class="presence-dot" id="dot-davey"></span>
-          <div>
-            <span>DAVEY</span>
+          <div class="contact-info-wrap">
+            <span class="contact-name-tag">DAVEY</span>
             <span class="contact-status-tag" id="status-davey">Offline</span>
           </div>
         </button>
@@ -829,8 +846,8 @@
       <div class="contact-card" data-target="chuckie">
         <button class="contact-btn">
           <span class="presence-dot" id="dot-chuckie"></span>
-          <div>
-            <span>CHUCKIE</span>
+          <div class="contact-info-wrap">
+            <span class="contact-name-tag">CHUCKIE</span>
             <span class="contact-status-tag" id="status-chuckie">Offline</span>
           </div>
         </button>
@@ -882,6 +899,7 @@
   <div id="logBox" class="log-box">Tap Power On to connect to mesh network.</div>
 
   <audio id="keepAliveAudio" loop playsinline src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAP8A/w=="></audio>
+  <video id="keepAliveVideo" playsinline muted loop style="display:none; width:1px; height:1px;"></video>
 
   <!-- Live Crew Radar GPS Modal -->
   <div id="radarModal" class="modal-overlay">
@@ -950,7 +968,7 @@
     }
 
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js?v=2026.08.28-1').then(reg => {
+      navigator.serviceWorker.register('sw.js?v=2026.08.28-2').then(reg => {
         reg.update();
       }).catch(() => {});
     }
@@ -996,6 +1014,7 @@
     const contactCards = document.querySelectorAll(".contact-card");
     const userStatusSelect = document.getElementById("userStatusSelect");
     const keepAliveAudio = document.getElementById("keepAliveAudio");
+    const keepAliveVideo = document.getElementById("keepAliveVideo");
     const replayBtn = document.getElementById("replayBtn");
     const filterBtn = document.getElementById("filterBtn");
     const filterLabel = document.getElementById("filterLabel");
@@ -1299,11 +1318,48 @@
       return audioContext;
     }
 
+    // Screen Keep-Awake Logic (WakeLock API + Video Canvas Stream Loop)
     async function requestWakeLock() {
       try {
-        if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen');
+        if ('wakeLock' in navigator && isPoweredOn) {
+          wakeLock = await navigator.wakeLock.request('screen');
+          wakeLock.addEventListener('release', () => {
+            if (isPoweredOn && document.visibilityState === 'visible') {
+              requestWakeLock();
+            }
+          });
+        }
       } catch (err) {}
     }
+
+    function startVideoKeepAlive() {
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = 8;
+        canvas.height = 8;
+        const ctx = canvas.getContext("2d");
+        ctx.fillStyle = "#000000";
+        ctx.fillRect(0, 0, 8, 8);
+        const stream = canvas.captureStream(2);
+        keepAliveVideo.srcObject = stream;
+        keepAliveVideo.play().catch(() => {});
+      } catch (e) {}
+    }
+
+    function stopVideoKeepAlive() {
+      try {
+        keepAliveVideo.pause();
+        keepAliveVideo.srcObject = null;
+      } catch (e) {}
+    }
+
+    document.addEventListener('visibilitychange', async () => {
+      if (document.visibilityState === 'visible' && isPoweredOn) {
+        await requestWakeLock();
+        try { keepAliveAudio.play().catch(() => {}); } catch(e) {}
+        try { keepAliveVideo.play().catch(() => {}); } catch(e) {}
+      }
+    });
 
     function sendPushAlert(target, title, message) {
       const topic = target === "talkall" ? `fr_channel_${activeChannel}_push` : `fr_ping_${target}_direct`;
@@ -1372,6 +1428,7 @@
         }
 
         try { keepAliveAudio.play().catch(() => {}); } catch(e) {}
+        startVideoKeepAlive();
 
         powerBtn.innerText = "CONNECTING...";
         powerBtn.disabled = true;
@@ -1495,6 +1552,7 @@
 
     function shutdownRadio() {
       if (wakeLock) { wakeLock.release().catch(() => {}); wakeLock = null; }
+      stopVideoKeepAlive();
       if (gpsWatchId && 'geolocation' in navigator) {
         navigator.geolocation.clearWatch(gpsWatchId);
         gpsWatchId = null;
