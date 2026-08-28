@@ -793,6 +793,20 @@
         </div>
       </div>
 
+      <div class="contact-card" data-target="robert">
+        <button class="contact-btn">
+          <span class="presence-dot" id="dot-robert"></span>
+          <div class="contact-info-wrap">
+            <span class="contact-name-tag">ROBERT KERR</span>
+            <span class="contact-status-tag" id="status-robert">Offline</span>
+          </div>
+        </button>
+        <div class="contact-actions">
+          <button class="buzz-btn" title="Buzz Robert">⚡</button>
+          <button class="msg-btn" title="Message Robert">💬</button>
+        </div>
+      </div>
+
       <div class="contact-card" data-target="jim">
         <button class="contact-btn">
           <span class="presence-dot" id="dot-jim"></span>
@@ -947,6 +961,7 @@
       "work": "Work Phone",
       "laptop": "Laptop",
       "karlwithak": "Karl with a K",
+      "robert": "Robert Kerr",
       "jim": "California Jim",
       "edd": "Edd",
       "matt": "Minnesota Matt",
@@ -974,7 +989,7 @@
     }
 
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js?v=2026.08.28-3').then(reg => {
+      navigator.serviceWorker.register('sw.js?v=2026.08.28-4').then(reg => {
         reg.update();
       }).catch(() => {});
     }
@@ -1067,7 +1082,7 @@
     updateSunsetCountdown();
     setInterval(updateSunsetCountdown, 60000);
 
-    // Format Relative Time (e.g., "3m ago", "2h ago", or formatted clock time)
+    // Format Relative Time
     function formatTimeAgo(timestamp) {
       if (!timestamp) return "Offline";
       const diffMs = Date.now() - timestamp;
@@ -1080,7 +1095,7 @@
       return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
     }
 
-    // Refresh Last Seen Labels Every 15 seconds
+    // Refresh Last Seen Labels
     function refreshPresenceDisplay() {
       Object.keys(userMap).forEach(uId => {
         if (uId === myId) return;
@@ -1122,7 +1137,7 @@
       });
     });
 
-    // Geolocation Tracker (Continuous & On-Demand)
+    // Geolocation Tracker
     function updateLocation() {
       if ('geolocation' in navigator) {
         navigator.geolocation.getCurrentPosition(
