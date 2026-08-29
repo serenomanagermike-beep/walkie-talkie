@@ -123,6 +123,65 @@
     }
     .beach-widget span { display: block; color: #bae6fd; font-size: 0.58rem; }
 
+    /* High-Priority Floating Stop Alert Overlay */
+    .alert-loop-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(8px);
+      z-index: 9999;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      text-align: center;
+    }
+    .alert-loop-overlay.active { display: flex; }
+    .alert-loop-card {
+      background: linear-gradient(180deg, #b91c1c 0%, #7f1d1d 100%);
+      border: 3px solid #fef08a;
+      border-radius: 16px;
+      padding: 24px 16px;
+      max-width: 340px;
+      width: 100%;
+      box-shadow: 0 0 40px rgba(239, 68, 68, 0.9);
+      animation: alertPulse 0.6s infinite alternate;
+    }
+    .alert-loop-title {
+      font-family: 'Chakra Petch', sans-serif;
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: #ffffff;
+      margin-bottom: 8px;
+      letter-spacing: 1px;
+    }
+    .alert-loop-subtitle {
+      font-family: 'Chakra Petch', sans-serif;
+      font-size: 0.85rem;
+      color: #fef08a;
+      margin-bottom: 18px;
+    }
+    .big-stop-btn {
+      background: #fef08a;
+      color: #0f172a;
+      border: 2px solid #ffffff;
+      border-radius: 12px;
+      padding: 14px 20px;
+      font-family: 'Chakra Petch', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 800;
+      cursor: pointer;
+      width: 100%;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6);
+    }
+    .big-stop-btn:active { transform: scale(0.95); }
+
+    @keyframes alertPulse {
+      from { transform: scale(0.98); }
+      to { transform: scale(1.02); }
+    }
+
     .channel-tabs {
       width: 100%;
       max-width: 400px;
@@ -153,47 +212,6 @@
       background: linear-gradient(180deg, #ef4444 0%, #b91c1c 100%);
       border-color: #f87171;
       box-shadow: 0 0 12px rgba(239, 68, 68, 0.7);
-    }
-
-    /* Repeating Broadcast Alert Banner */
-    .alert-loop-banner {
-      display: none;
-      width: 100%;
-      max-width: 400px;
-      background: linear-gradient(180deg, #ef4444 0%, #b91c1c 100%);
-      border: 2px solid #fef08a;
-      border-radius: 8px;
-      padding: 6px 10px;
-      margin-bottom: 6px;
-      text-align: center;
-      animation: alertFlash 0.8s infinite alternate;
-      box-shadow: 0 0 20px rgba(239, 68, 68, 0.9);
-    }
-    .alert-loop-banner.active { display: flex; flex-direction: column; gap: 4px; }
-    .alert-loop-title {
-      font-family: 'Chakra Petch', sans-serif;
-      font-size: 0.85rem;
-      font-weight: 800;
-      color: #ffffff;
-      letter-spacing: 1px;
-    }
-    .stop-loop-btn {
-      background: #fef08a;
-      color: #0f172a;
-      border: none;
-      border-radius: 6px;
-      padding: 4px 10px;
-      font-family: 'Chakra Petch', sans-serif;
-      font-size: 0.75rem;
-      font-weight: 800;
-      cursor: pointer;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.5);
-    }
-    .stop-loop-btn:active { transform: scale(0.96); }
-
-    @keyframes alertFlash {
-      from { transform: scale(0.99); filter: brightness(0.9); }
-      to { transform: scale(1.01); filter: brightness(1.2); }
     }
 
     .screen {
@@ -763,10 +781,13 @@
     </div>
   </div>
 
-  <!-- Active Repeating Alert Loop Banner -->
-  <div id="alertLoopBanner" class="alert-loop-banner">
-    <div id="alertLoopText" class="alert-loop-title">🚨 REPEATING CREW ALERT ACTIVE</div>
-    <button id="stopLoopBtn" class="stop-loop-btn" onclick="stopActiveAlertLoop(true)">🛑 STOP ALERT LOOP</button>
+  <!-- High-Priority Floating Stop Alert Overlay -->
+  <div id="alertLoopOverlay" class="alert-loop-overlay">
+    <div class="alert-loop-card">
+      <div id="alertOverlaySender" class="alert-loop-title">🚨 REPEATING CREW ALERT</div>
+      <div id="alertOverlayPhrase" class="alert-loop-subtitle">"I'm hungry"</div>
+      <button class="big-stop-btn" onclick="stopActiveAlertLoop(true)">🛑 STOP ALERT LOOP</button>
+    </div>
   </div>
 
   <!-- Sub-Channels / Groups -->
@@ -1098,7 +1119,7 @@
     }
 
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js?v=2026.08.28-6').then(reg => {
+      navigator.serviceWorker.register('sw.js?v=2026.08.28-7').then(reg => {
         reg.update();
       }).catch(() => {});
     }
@@ -1130,7 +1151,6 @@
 
     // Repeating Loop Alert State
     let repeatingAlertTimer = null;
-    let currentRepeatingPhrase = null;
 
     // Last Seen Tracking Data Store
     let userPresenceHistory = {};
@@ -1161,18 +1181,9 @@
     const filterLabel = document.getElementById("filterLabel");
     const volBoostSlider = document.getElementById("volBoostSlider");
     const volBoostLabel = document.getElementById("volBoostLabel");
-    const alertLoopBanner = document.getElementById("alertLoopBanner");
-    const alertLoopText = document.getElementById("alertLoopText");
-
-    // Modal Elements
-    const radarOpenBtn = document.getElementById("radarOpenBtn");
-    const radarCloseBtn = document.getElementById("radarCloseBtn");
-    const radarCenterBtn = document.getElementById("radarCenterBtn");
-    const radarModal = document.getElementById("radarModal");
-    const adminOpenBtn = document.getElementById("adminOpenBtn");
-    const adminCloseBtn = document.getElementById("adminCloseBtn");
-    const adminModal = document.getElementById("adminModal");
-    const adminUserList = document.getElementById("adminUserList");
+    const alertLoopOverlay = document.getElementById("alertLoopOverlay");
+    const alertOverlaySender = document.getElementById("alertOverlaySender");
+    const alertOverlayPhrase = document.getElementById("alertOverlayPhrase");
 
     function triggerHaptic(pattern = [40]) {
       if ("vibrate" in navigator) {
@@ -1201,19 +1212,30 @@
     window.startRepeatingAlert = function(phrase, label) {
       if (!isPoweredOn) return alert("Power on the radio first.");
       
+      const destination = selectedTarget === "talkall"
+        ? `friendradio/channel/${activeChannel}`
+        : `friendradio/direct/${selectedTarget}`;
+
       const payload = new Paho.MQTT.Message(JSON.stringify({
         type: "START_REPEATING_ALERT",
         sender: myId,
         senderName: myDisplayName,
+        target: selectedTarget,
         phrase: phrase,
         label: label
       }));
-      payload.destinationName = `friendradio/channel/${activeChannel}`;
+      payload.destinationName = destination;
       mqttClient.send(payload);
 
-      sendPushAlert("talkall", `🚨 CREW ALERT: ${label}`, `${myDisplayName} triggered repeating alert: ${phrase}`);
-      runLocalAlertLoop(phrase, label, myDisplayName);
-      log(`🚨 Broadcasted repeating alert: [${label}]`);
+      sendPushAlert(selectedTarget, `🚨 CREW ALERT: ${label}`, `${myDisplayName} sent alert: ${phrase}`);
+      
+      // If targeting another person directly, don't scream continuously on our own phone
+      if (selectedTarget === "talkall") {
+        runLocalAlertLoop(phrase, label, myDisplayName);
+      } else {
+        log(`🚨 Alert [${label}] sent to ${userMap[selectedTarget] || selectedTarget}`);
+        playChirp("roger");
+      }
     };
 
     window.stopActiveAlertLoop = function(broadcast = true) {
@@ -1221,9 +1243,8 @@
         clearInterval(repeatingAlertTimer);
         repeatingAlertTimer = null;
       }
-      currentRepeatingPhrase = null;
       if ('speechSynthesis' in window) window.speechSynthesis.cancel();
-      alertLoopBanner.classList.remove("active");
+      alertLoopOverlay.classList.remove("active");
 
       if (broadcast && mqttClient && mqttClient.isConnected()) {
         const payload = new Paho.MQTT.Message(JSON.stringify({
@@ -1233,16 +1254,27 @@
         }));
         payload.destinationName = `friendradio/channel/${activeChannel}`;
         mqttClient.send(payload);
+
+        // Also broadcast on direct channel just in case
+        if (selectedTarget !== "talkall") {
+          const directStop = new Paho.MQTT.Message(JSON.stringify({
+            type: "STOP_REPEATING_ALERT",
+            sender: myId,
+            senderName: myDisplayName
+          }));
+          directStop.destinationName = `friendradio/direct/${selectedTarget}`;
+          mqttClient.send(directStop);
+        }
         log("🛑 Alert loop stopped.");
       }
     };
 
     function runLocalAlertLoop(phrase, label, senderName) {
       stopActiveAlertLoop(false);
-      currentRepeatingPhrase = phrase;
 
-      alertLoopText.innerText = `🚨 ${senderName.toUpperCase()}: ${label}`;
-      alertLoopBanner.classList.add("active");
+      alertOverlaySender.innerText = `🚨 ${senderName.toUpperCase()}`;
+      alertOverlayPhrase.innerText = `"${label}"`;
+      alertLoopOverlay.classList.add("active");
 
       const playCycle = () => {
         playChirp("buzz");
