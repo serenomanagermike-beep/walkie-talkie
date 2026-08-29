@@ -365,16 +365,20 @@
     .buzz-btn { border-right: 1px solid rgba(255, 255, 255, 0.1); }
 
     .contact-card.active {
-      background: linear-gradient(180deg, #0ea5e9 0%, #0284c7 100%);
-      border-color: #7dd3fc;
-      box-shadow: 0 0 10px rgba(56, 189, 248, 0.6);
+      background: linear-gradient(180deg, #0ea5e9 0%, #0284c7 100%) !important;
+      border-color: #7dd3fc !important;
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.8) !important;
     }
-    .contact-card.active .contact-btn { color: #ffffff; }
+    .contact-card.active .contact-btn { color: #ffffff !important; }
 
     .contact-card.talkall {
       grid-column: span 2;
-      background: linear-gradient(180deg, #0284c7 0%, #0369a1 100%);
-      border-color: #38bdf8;
+      background: linear-gradient(180deg, rgba(14, 116, 144, 0.85) 0%, rgba(21, 94, 117, 0.95) 100%);
+      border-color: rgba(56, 189, 248, 0.4);
+    }
+    .contact-card.talkall.active {
+      background: linear-gradient(180deg, #0284c7 0%, #0369a1 100%) !important;
+      border-color: #38bdf8 !important;
     }
     .contact-card.talkall .contact-btn {
       font-size: 0.75rem;
@@ -779,6 +783,20 @@
       </div>
 
       <!-- Crew Members -->
+      <div class="contact-card" data-target="sherriebaby">
+        <button class="contact-btn">
+          <span class="presence-dot" id="dot-sherriebaby"></span>
+          <div class="contact-info-wrap">
+            <span class="contact-name-tag">SHERRIEBABY</span>
+            <span class="contact-status-tag" id="status-sherriebaby">Offline</span>
+          </div>
+        </button>
+        <div class="contact-actions">
+          <button class="buzz-btn" title="Buzz Sherriebaby">⚡</button>
+          <button class="msg-btn" title="Message Sherriebaby">💬</button>
+        </div>
+      </div>
+
       <div class="contact-card" data-target="karlwithak">
         <button class="contact-btn">
           <span class="presence-dot" id="dot-karlwithak"></span>
@@ -960,6 +978,7 @@
       "mikey": "Mikey (Personal)",
       "work": "Work Phone",
       "laptop": "Laptop",
+      "sherriebaby": "Sherriebaby",
       "karlwithak": "Karl with a K",
       "robert": "Robert Kerr",
       "jim": "California Jim",
@@ -989,7 +1008,7 @@
     }
 
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js?v=2026.08.28-4').then(reg => {
+      navigator.serviceWorker.register('sw.js?v=2026.08.28-5').then(reg => {
         reg.update();
       }).catch(() => {});
     }
@@ -1316,7 +1335,7 @@
       }
     };
 
-    // Contacts Selection & Visibility Gating
+    // Contacts Selection & Active State Sync
     contactCards.forEach(card => {
       const target = card.getAttribute("data-target");
       if (target === myId) {
@@ -1327,7 +1346,8 @@
 
       const selectBtn = card.querySelector(".contact-btn");
       selectBtn.addEventListener("click", () => {
-        contactCards.forEach(c => c.classList.remove("active"));
+        // Clear active class from EVERY card
+        document.querySelectorAll(".contact-card").forEach(c => c.classList.remove("active"));
         card.classList.add("active");
         selectedTarget = target;
 
@@ -1804,7 +1824,6 @@
             if (dot) dot.className = "presence-dot";
             if (tag) tag.innerText = `Seen ${formatTimeAgo(userPresenceHistory[uId]?.lastSeen || Date.now())}`;
             
-            // Mark marker as offline on map without removing location pin
             if (crewMarkers[uId] && userPresenceHistory[uId]?.coords) {
               updateCrewMarker(uId, userMap[uId] || uId, userPresenceHistory[uId].coords, "Offline", false, false, userPresenceHistory[uId].lastSeen);
             }
@@ -1941,7 +1960,7 @@
       const isInputActive = document.activeElement && (document.activeElement.tagName === "INPUT" || document.activeElement.tagName === "TEXTAREA");
       if (isInputActive) return;
 
-      if ((e.code === "Space" || e.key === "AudioVolumeUp" || e.code === "VolumeUp") && !isTransmitting) {
+      if (e.code === "Space" && !isTransmitting) {
         e.preventDefault();
         startTransmit();
       }
@@ -1951,7 +1970,7 @@
       const isInputActive = document.activeElement && (document.activeElement.tagName === "INPUT" || document.activeElement.tagName === "TEXTAREA");
       if (isInputActive) return;
 
-      if (e.code === "Space" || e.key === "AudioVolumeUp" || e.code === "VolumeUp") {
+      if (e.code === "Space") {
         e.preventDefault();
         stopTransmit();
       }
