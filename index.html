@@ -1131,7 +1131,7 @@
     }
 
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js?v=2026.08.28-9').then(reg => {
+      navigator.serviceWorker.register('sw.js?v=2026.08.28-10').then(reg => {
         reg.update();
       }).catch(() => {});
     }
@@ -2145,7 +2145,6 @@
 
         // Repeating Alert Remote Start / Stop
         if (payload.type === "START_REPEATING_ALERT") {
-          // Verify if it's direct to me or a broadcast
           if (payload.target === "talkall" || payload.target === myId) {
             runLocalAlertLoop(payload.phrase, payload.label, payload.senderName);
             log(`🚨 REPEATING ALERT from ${payload.senderName}: "${payload.label}"`);
