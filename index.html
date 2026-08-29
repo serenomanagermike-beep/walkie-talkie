@@ -409,7 +409,7 @@
       display: flex;
       border-left: 1px solid rgba(255, 255, 255, 0.15);
     }
-    .buzz-btn, .msg-btn {
+    .buzz-btn, .msg-btn, .wake-btn {
       background: rgba(0, 0, 0, 0.25);
       border: none;
       color: #fef08a;
@@ -420,8 +420,8 @@
       align-items: center;
       justify-content: center;
     }
-    .buzz-btn:active, .msg-btn:active { background: rgba(254, 240, 138, 0.3); }
-    .buzz-btn { border-right: 1px solid rgba(255, 255, 255, 0.1); }
+    .buzz-btn:active, .msg-btn:active, .wake-btn:active { background: rgba(254, 240, 138, 0.3); }
+    .buzz-btn, .msg-btn { border-right: 1px solid rgba(255, 255, 255, 0.1); }
 
     .contact-card.active {
       background: linear-gradient(180deg, #0ea5e9 0%, #0284c7 100%) !important;
@@ -837,6 +837,7 @@
         <div class="contact-actions">
           <button class="buzz-btn" title="Alert All">⚡</button>
           <button class="msg-btn" title="Broadcast Text">💬</button>
+          <button class="wake-btn" title="Wake Broadcast">📢</button>
         </div>
       </div>
 
@@ -852,6 +853,7 @@
         <div class="contact-actions">
           <button class="buzz-btn" title="Buzz Mikey">⚡</button>
           <button class="msg-btn" title="Message Mikey">💬</button>
+          <button class="wake-btn" title="Wake Mikey to Turn App On">📢</button>
         </div>
       </div>
 
@@ -866,6 +868,7 @@
         <div class="contact-actions">
           <button class="buzz-btn" title="Buzz Work">⚡</button>
           <button class="msg-btn" title="Message Work">💬</button>
+          <button class="wake-btn" title="Wake Work Phone">📢</button>
         </div>
       </div>
 
@@ -880,6 +883,7 @@
         <div class="contact-actions">
           <button class="buzz-btn" title="Buzz Laptop">⚡</button>
           <button class="msg-btn" title="Message Laptop">💬</button>
+          <button class="wake-btn" title="Wake Laptop">📢</button>
         </div>
       </div>
 
@@ -895,6 +899,7 @@
         <div class="contact-actions">
           <button class="buzz-btn" title="Buzz Sherriebaby">⚡</button>
           <button class="msg-btn" title="Message Sherriebaby">💬</button>
+          <button class="wake-btn" title="Wake Sherriebaby to Turn App On">📢</button>
         </div>
       </div>
 
@@ -909,6 +914,7 @@
         <div class="contact-actions">
           <button class="buzz-btn" title="Buzz Karl with a K">⚡</button>
           <button class="msg-btn" title="Message Karl with a K">💬</button>
+          <button class="wake-btn" title="Wake Karl">📢</button>
         </div>
       </div>
 
@@ -923,6 +929,7 @@
         <div class="contact-actions">
           <button class="buzz-btn" title="Buzz Robert">⚡</button>
           <button class="msg-btn" title="Message Robert">💬</button>
+          <button class="wake-btn" title="Wake Robert">📢</button>
         </div>
       </div>
 
@@ -937,6 +944,7 @@
         <div class="contact-actions">
           <button class="buzz-btn" title="Buzz Jim">⚡</button>
           <button class="msg-btn" title="Message Jim">💬</button>
+          <button class="wake-btn" title="Wake Jim">📢</button>
         </div>
       </div>
 
@@ -951,6 +959,7 @@
         <div class="contact-actions">
           <button class="buzz-btn" title="Buzz Edd">⚡</button>
           <button class="msg-btn" title="Message Edd">💬</button>
+          <button class="wake-btn" title="Wake Edd">📢</button>
         </div>
       </div>
 
@@ -965,6 +974,7 @@
         <div class="contact-actions">
           <button class="buzz-btn" title="Buzz Matt">⚡</button>
           <button class="msg-btn" title="Message Matt">💬</button>
+          <button class="wake-btn" title="Wake Matt">📢</button>
         </div>
       </div>
 
@@ -979,6 +989,7 @@
         <div class="contact-actions">
           <button class="buzz-btn" title="Buzz Davey">⚡</button>
           <button class="msg-btn" title="Message Davey">💬</button>
+          <button class="wake-btn" title="Wake Davey">📢</button>
         </div>
       </div>
 
@@ -993,6 +1004,7 @@
         <div class="contact-actions">
           <button class="buzz-btn" title="Buzz Chuckie">⚡</button>
           <button class="msg-btn" title="Message Chuckie">💬</button>
+          <button class="wake-btn" title="Wake Chuckie">📢</button>
         </div>
       </div>
     </div>
@@ -1119,7 +1131,7 @@
     }
 
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js?v=2026.08.28-7').then(reg => {
+      navigator.serviceWorker.register('sw.js?v=2026.08.28-8').then(reg => {
         reg.update();
       }).catch(() => {});
     }
@@ -1208,6 +1220,32 @@
     updateSunsetCountdown();
     setInterval(updateSunsetCountdown, 60000);
 
+    // Send "Turn on the App" Wake Ping
+    window.sendWakeUpPing = function(target) {
+      if (!isPoweredOn) return alert("Power on the radio first.");
+      const contactName = target === "talkall" ? "BROADCAST (ALL)" : (userMap[target] || target);
+      const wakeText = `⚠️ TURN ON THE APP! ${myDisplayName} is calling for you on Friend Radio!`;
+      
+      sendPushAlert(target, `🚨 WAKE UP & OPEN FRIEND RADIO`, `${myDisplayName} is paging you! Tap here to open.`);
+
+      // Store in retained offline mailbox
+      const payload = new Paho.MQTT.Message(JSON.stringify({
+        type: "WAKE_UP_ALERT",
+        sender: myId,
+        senderName: myDisplayName,
+        target: target,
+        text: wakeText,
+        timestamp: Date.now()
+      }));
+      payload.retained = true;
+      payload.destinationName = target === "talkall" ? `friendradio/inbox/all` : `friendradio/inbox/${target}`;
+      mqttClient.send(payload);
+
+      playChirp("buzz");
+      triggerHaptic([60, 40, 60]);
+      log(`📢 Wake-up Alert sent to ${contactName}`);
+    };
+
     // Repeating Alert Loop Handlers
     window.startRepeatingAlert = function(phrase, label) {
       if (!isPoweredOn) return alert("Power on the radio first.");
@@ -1227,9 +1265,21 @@
       payload.destinationName = destination;
       mqttClient.send(payload);
 
+      // Also retain in offline mailbox so they hear it upon powering on
+      const retainedInbox = new Paho.MQTT.Message(JSON.stringify({
+        type: "OFFLINE_MISSED_ALERT",
+        sender: myId,
+        senderName: myDisplayName,
+        phrase: phrase,
+        label: label,
+        timestamp: Date.now()
+      }));
+      retainedInbox.retained = true;
+      retainedInbox.destinationName = selectedTarget === "talkall" ? `friendradio/inbox/all` : `friendradio/inbox/${selectedTarget}`;
+      mqttClient.send(retainedInbox);
+
       sendPushAlert(selectedTarget, `🚨 CREW ALERT: ${label}`, `${myDisplayName} sent alert: ${phrase}`);
       
-      // If targeting another person directly, don't scream continuously on our own phone
       if (selectedTarget === "talkall") {
         runLocalAlertLoop(phrase, label, myDisplayName);
       } else {
@@ -1255,7 +1305,6 @@
         payload.destinationName = `friendradio/channel/${activeChannel}`;
         mqttClient.send(payload);
 
-        // Also broadcast on direct channel just in case
         if (selectedTarget !== "talkall") {
           const directStop = new Paho.MQTT.Message(JSON.stringify({
             type: "STOP_REPEATING_ALERT",
@@ -1265,9 +1314,20 @@
           directStop.destinationName = `friendradio/direct/${selectedTarget}`;
           mqttClient.send(directStop);
         }
-        log("🛑 Alert loop stopped.");
+
+        // Clear retained offline alert
+        clearRetainedInbox(selectedTarget);
+        log("🛑 Alert loop stopped & cleared from inbox.");
       }
     };
+
+    function clearRetainedInbox(target) {
+      if (!mqttClient || !mqttClient.isConnected()) return;
+      const emptyMsg = new Paho.MQTT.Message("");
+      emptyMsg.retained = true;
+      emptyMsg.destinationName = target === "talkall" ? `friendradio/inbox/all` : `friendradio/inbox/${target}`;
+      mqttClient.send(emptyMsg);
+    }
 
     function runLocalAlertLoop(phrase, label, senderName) {
       stopActiveAlertLoop(false);
@@ -1394,7 +1454,6 @@
             attribution: '© OpenStreetMap'
           }).addTo(crewMap);
 
-          // Restore last known positions for offline members
           Object.keys(userPresenceHistory).forEach(uId => {
             if (uId === myId) return;
             const h = userPresenceHistory[uId];
@@ -1520,7 +1579,7 @@
       }
     };
 
-    // Contacts Selection & Active State Sync
+    // Contacts Selection & Actions
     contactCards.forEach(card => {
       const target = card.getAttribute("data-target");
       if (target === myId) {
@@ -1559,11 +1618,19 @@
         e.stopPropagation();
         if (!isPoweredOn) return alert("Power on the radio first.");
         const contactName = target === "talkall" ? "Broadcast (All)" : (userMap[target] || target);
-        const msg = prompt(`Send direct message to ${contactName}:`);
+        const msg = prompt(`Send message / leave in offline mailbox for ${contactName}:`);
         if (msg && msg.trim() !== "") {
           sendDirectTextMessage(target, msg.trim());
         }
       });
+
+      const wakeBtn = card.querySelector(".wake-btn");
+      if (wakeBtn) {
+        wakeBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          sendWakeUpPing(target);
+        });
+      }
     });
 
     window.sendQuickSound = function(phrase) {
@@ -1800,6 +1867,8 @@
 
           mqttClient.subscribe("friendradio/channel/#");
           mqttClient.subscribe(`friendradio/direct/${myId}`);
+          mqttClient.subscribe(`friendradio/inbox/${myId}`);
+          mqttClient.subscribe("friendradio/inbox/all");
           mqttClient.subscribe("friendradio/presence");
           mqttClient.subscribe("friendradio/control");
           mqttClient.subscribe("friendradio/state/#");
@@ -1872,6 +1941,7 @@
       log(`⚡ Buzz sent to ${target === 'talkall' ? 'CHANNEL' : userMap[target]}`);
     }
 
+    // Direct Text Messages with Offline Mailbox Retention
     function sendDirectTextMessage(target, text) {
       sendPushAlert(target, `💬 ${myDisplayName}`, text);
       const topic = target === "talkall" ? `friendradio/channel/${activeChannel}` : `friendradio/direct/${target}`;
@@ -1880,10 +1950,25 @@
         sender: myId,
         senderName: myDisplayName,
         target: target,
-        text: text
+        text: text,
+        timestamp: Date.now()
       }));
       msgPayload.destinationName = topic;
       mqttClient.send(msgPayload);
+
+      // Store in Retained Offline Inbox
+      const inboxMsg = new Paho.MQTT.Message(JSON.stringify({
+        type: "OFFLINE_MISSED_MESSAGE",
+        sender: myId,
+        senderName: myDisplayName,
+        target: target,
+        text: text,
+        timestamp: Date.now()
+      }));
+      inboxMsg.retained = true;
+      inboxMsg.destinationName = target === "talkall" ? `friendradio/inbox/all` : `friendradio/inbox/${target}`;
+      mqttClient.send(inboxMsg);
+
       log(`💬 Sent to ${target === 'talkall' ? 'ALL' : userMap[target]}: "${text}"`);
     }
 
@@ -1958,6 +2043,19 @@
         }));
         voiceMsg.destinationName = topic;
         mqttClient.send(voiceMsg);
+
+        // Retain latest voice mail in offline inbox
+        const offlineVoice = new Paho.MQTT.Message(JSON.stringify({
+          type: "OFFLINE_VOICEMAIL",
+          sender: myId,
+          senderName: myDisplayName,
+          target: selectedTarget,
+          data: base64Data,
+          timestamp: Date.now()
+        }));
+        offlineVoice.retained = true;
+        offlineVoice.destinationName = selectedTarget === "talkall" ? `friendradio/inbox/all` : `friendradio/inbox/${selectedTarget}`;
+        mqttClient.send(offlineVoice);
       };
 
       mediaRecorder.start();
@@ -1980,10 +2078,37 @@
 
     function handleIncomingRadioMessage(message) {
       try {
+        if (!message.payloadString || message.payloadString.trim() === "") return;
         const payload = JSON.parse(message.payloadString);
         if (payload.sender === myId || payload.userId === myId) return;
 
-        // Presence Heartbeat & Live GPS Pin Placement with Last-Seen Stamping
+        // Offline Inbox Delivery upon powering on
+        if (message.destinationName.startsWith("friendradio/inbox/")) {
+          const sentAgo = formatTimeAgo(payload.timestamp);
+
+          if (payload.type === "WAKE_UP_ALERT") {
+            playChirp("buzz");
+            triggerHaptic([100, 50, 100]);
+            speakPhrase(`Wake up alert from ${payload.senderName}`);
+            alert(`📢 WAKE-UP CALL (${sentAgo}):\n\n${payload.senderName} paged you to turn on Friend Radio!`);
+          } else if (payload.type === "OFFLINE_MISSED_MESSAGE") {
+            playChirp("roger");
+            speakPhrase(`You have an offline message from ${payload.senderName}`);
+            alert(`📥 OFFLINE MESSAGE (${sentAgo}):\n\nFrom: ${payload.senderName}\n"${payload.text}"`);
+          } else if (payload.type === "OFFLINE_VOICEMAIL") {
+            speakPhrase(`Playing offline voice note from ${payload.senderName}`);
+            lastVoiceBase64 = payload.data;
+            playVoicePayload(payload.data);
+          } else if (payload.type === "OFFLINE_MISSED_ALERT") {
+            runLocalAlertLoop(payload.phrase, payload.label, payload.senderName);
+          }
+
+          // Clear delivered message so it doesn't repeat on subsequent refreshes
+          clearRetainedInbox(myId);
+          return;
+        }
+
+        // Presence Heartbeat
         if (message.destinationName === "friendradio/presence") {
           const uId = payload.userId;
           const dot = document.getElementById(`dot-${uId}`);
