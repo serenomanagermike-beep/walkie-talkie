@@ -1131,7 +1131,7 @@
     }
 
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js?v=2026.08.28-10').then(reg => {
+      navigator.serviceWorker.register('sw.js?v=2026.08.28-11').then(reg => {
         reg.update();
       }).catch(() => {});
     }
@@ -1220,16 +1220,31 @@
     updateSunsetCountdown();
     setInterval(updateSunsetCountdown, 60000);
 
-    // Send High-Priority Push Notification to Lock Screen
+    // Send High-Priority Push Notification
     function sendPushAlert(target, title, message) {
-      const topic = target === "talkall" ? `fr_channel_${activeChannel}_push` : `fr_ping_${target}_direct`;
+      const topic = (target === "talkall") ? `fr_channel_${activeChannel}_push` : `fr_ping_${target}_direct`;
+      
+      // Native In-Browser Notification if granted
+      if ('Notification' in window && Notification.permission === 'granted') {
+        try {
+          navigator.serviceWorker.ready.then(registration => {
+            registration.showNotification(title, {
+              body: message,
+              icon: 'icon-192.png',
+              vibrate: [200, 100, 200],
+              tag: 'friend-radio-alert'
+            });
+          });
+        } catch(e) {}
+      }
+
+      // External HTTP Push Gateway
       fetch(`https://ntfy.sh/${topic}`, {
         method: 'POST',
         headers: {
           'Title': title,
           'Priority': 'urgent',
-          'Tags': 'radio,loudspeaker,rotating_light',
-          'Click': window.location.href
+          'Tags': 'radio,loudspeaker,rotating_light'
         },
         body: message
       }).catch(() => {});
@@ -1239,9 +1254,12 @@
     window.sendWakeUpPing = function(target) {
       if (!isPoweredOn) return alert("Power on the radio first.");
       const contactName = target === "talkall" ? "BROADCAST (ALL)" : (userMap[target] || target);
-      const wakeText = `⚠️ TURN ON THE APP! ${myDisplayName} is paging you on Friend Radio!`;
+      const wakeText = `⚠️ TURN ON FRIEND RADIO! ${myDisplayName} is calling for you!`;
       
-      sendPushAlert(target, `🚨 WAKE UP & OPEN FRIEND RADIO`, `${myDisplayName} is paging you! Tap to open radio.`);
+      sendPushAlert(target, `🚨 WAKE UP: ${myDisplayName}`, wakeText);
+
+      const isDirect = (target !== "talkall");
+      const destination = isDirect ? `friendradio/direct/${target}` : `friendradio/channel/${activeChannel}`;
 
       const payload = new Paho.MQTT.Message(JSON.stringify({
         type: "WAKE_UP_ALERT",
@@ -1251,13 +1269,12 @@
         text: wakeText,
         timestamp: Date.now()
       }));
-      payload.retained = true;
-      payload.destinationName = target === "talkall" ? `friendradio/inbox/all` : `friendradio/inbox/${target}`;
+      payload.destinationName = destination;
       mqttClient.send(payload);
 
       playChirp("buzz");
       triggerHaptic([60, 40, 60]);
-      log(`📢 Wake-up alert beamed to ${contactName}`);
+      log(`📢 Wake alert beamed to ${contactName}`);
     };
 
     // Repeating Alert Loop Handlers
@@ -1280,25 +1297,12 @@
       payload.destinationName = destination;
       mqttClient.send(payload);
 
-      const retainedInbox = new Paho.MQTT.Message(JSON.stringify({
-        type: "OFFLINE_MISSED_ALERT",
-        sender: myId,
-        senderName: myDisplayName,
-        target: selectedTarget,
-        phrase: phrase,
-        label: label,
-        timestamp: Date.now()
-      }));
-      retainedInbox.retained = true;
-      retainedInbox.destinationName = isDirect ? `friendradio/inbox/${selectedTarget}` : `friendradio/inbox/all`;
-      mqttClient.send(retainedInbox);
-
-      sendPushAlert(selectedTarget, `🚨 CREW ALERT: ${label}`, `${myDisplayName} sent repeating alert: "${phrase}"`);
+      sendPushAlert(selectedTarget, `🚨 CREW ALERT: ${label}`, `${myDisplayName}: "${phrase}"`);
       
       if (!isDirect) {
         runLocalAlertLoop(phrase, label, myDisplayName);
       } else {
-        log(`🚨 Direct alert [${label}] sent to ${userMap[selectedTarget] || selectedTarget}`);
+        log(`🚨 Alert [${label}] sent to ${userMap[selectedTarget] || selectedTarget}`);
         playChirp("roger");
       }
     };
@@ -1329,19 +1333,9 @@
           directStop.destinationName = `friendradio/direct/${selectedTarget}`;
           mqttClient.send(directStop);
         }
-
-        clearRetainedInbox(selectedTarget);
         log("🛑 Alert loop stopped.");
       }
     };
-
-    function clearRetainedInbox(target) {
-      if (!mqttClient || !mqttClient.isConnected()) return;
-      const emptyMsg = new Paho.MQTT.Message("");
-      emptyMsg.retained = true;
-      emptyMsg.destinationName = target === "talkall" ? `friendradio/inbox/all` : `friendradio/inbox/${target}`;
-      mqttClient.send(emptyMsg);
-    }
 
     function runLocalAlertLoop(phrase, label, senderName) {
       stopActiveAlertLoop(false);
@@ -1632,7 +1626,7 @@
         e.stopPropagation();
         if (!isPoweredOn) return alert("Power on the radio first.");
         const contactName = target === "talkall" ? "Broadcast (All)" : (userMap[target] || target);
-        const msg = prompt(`Send message / leave in offline mailbox for ${contactName}:`);
+        const msg = prompt(`Send direct message to ${contactName}:`);
         if (msg && msg.trim() !== "") {
           sendDirectTextMessage(target, msg.trim());
         }
@@ -1872,8 +1866,6 @@
 
           mqttClient.subscribe("friendradio/channel/#");
           mqttClient.subscribe(`friendradio/direct/${myId}`);
-          mqttClient.subscribe(`friendradio/inbox/${myId}`);
-          mqttClient.subscribe("friendradio/inbox/all");
           mqttClient.subscribe("friendradio/presence");
           mqttClient.subscribe("friendradio/control");
           mqttClient.subscribe("friendradio/state/#");
@@ -1961,19 +1953,6 @@
       }));
       msgPayload.destinationName = topic;
       mqttClient.send(msgPayload);
-
-      const inboxMsg = new Paho.MQTT.Message(JSON.stringify({
-        type: "OFFLINE_MISSED_MESSAGE",
-        sender: myId,
-        senderName: myDisplayName,
-        target: target,
-        text: text,
-        timestamp: Date.now()
-      }));
-      inboxMsg.retained = true;
-      inboxMsg.destinationName = isDirect ? `friendradio/inbox/${target}` : `friendradio/inbox/all`;
-      mqttClient.send(inboxMsg);
-
       log(`💬 Sent to ${target === 'talkall' ? 'ALL' : userMap[target]}: "${text}"`);
     }
 
@@ -2048,18 +2027,6 @@
         }));
         voiceMsg.destinationName = topic;
         mqttClient.send(voiceMsg);
-
-        const offlineVoice = new Paho.MQTT.Message(JSON.stringify({
-          type: "OFFLINE_VOICEMAIL",
-          sender: myId,
-          senderName: myDisplayName,
-          target: selectedTarget,
-          data: base64Data,
-          timestamp: Date.now()
-        }));
-        offlineVoice.retained = true;
-        offlineVoice.destinationName = selectedTarget === "talkall" ? `friendradio/inbox/all` : `friendradio/inbox/${selectedTarget}`;
-        mqttClient.send(offlineVoice);
       };
 
       mediaRecorder.start();
@@ -2085,31 +2052,6 @@
         if (!message.payloadString || message.payloadString.trim() === "") return;
         const payload = JSON.parse(message.payloadString);
         if (payload.sender === myId || payload.userId === myId) return;
-
-        // Offline Inbox Delivery upon powering on
-        if (message.destinationName.startsWith("friendradio/inbox/")) {
-          const sentAgo = formatTimeAgo(payload.timestamp);
-
-          if (payload.type === "WAKE_UP_ALERT") {
-            playChirp("buzz");
-            triggerHaptic([100, 50, 100]);
-            speakPhrase(`Wake up alert from ${payload.senderName}`);
-            alert(`📢 WAKE-UP CALL (${sentAgo}):\n\n${payload.senderName} paged you to turn on Friend Radio!`);
-          } else if (payload.type === "OFFLINE_MISSED_MESSAGE") {
-            playChirp("roger");
-            speakPhrase(`You have an offline message from ${payload.senderName}`);
-            alert(`📥 OFFLINE MESSAGE (${sentAgo}):\n\nFrom: ${payload.senderName}\n"${payload.text}"`);
-          } else if (payload.type === "OFFLINE_VOICEMAIL") {
-            speakPhrase(`Playing offline voice note from ${payload.senderName}`);
-            lastVoiceBase64 = payload.data;
-            playVoicePayload(payload.data);
-          } else if (payload.type === "OFFLINE_MISSED_ALERT") {
-            runLocalAlertLoop(payload.phrase, payload.label, payload.senderName);
-          }
-
-          clearRetainedInbox(myId);
-          return;
-        }
 
         // Presence Heartbeat
         if (message.destinationName === "friendradio/presence") {
@@ -2155,6 +2097,14 @@
         if (payload.type === "STOP_REPEATING_ALERT") {
           stopActiveAlertLoop(false);
           log(`🛑 Alert loop cancelled by ${payload.senderName}`);
+          return;
+        }
+
+        if (payload.type === "WAKE_UP_ALERT") {
+          playChirp("buzz");
+          triggerHaptic([100, 50, 100]);
+          speakPhrase(`Wake up alert from ${payload.senderName}`);
+          alert(`📢 WAKE-UP CALL:\n\n${payload.senderName} paged you on Friend Radio!`);
           return;
         }
 
