@@ -128,7 +128,7 @@
       display: none;
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0, 0, 0, 0.85);
+      background: rgba(0, 0, 0, 0.88);
       backdrop-filter: blur(8px);
       z-index: 9999;
       flex-direction: column;
@@ -853,7 +853,7 @@
         <div class="contact-actions">
           <button class="buzz-btn" title="Buzz Mikey">⚡</button>
           <button class="msg-btn" title="Message Mikey">💬</button>
-          <button class="wake-btn" title="Wake Mikey to Turn App On">📢</button>
+          <button class="wake-btn" title="Wake Mikey">📢</button>
         </div>
       </div>
 
@@ -1131,7 +1131,7 @@
     }
 
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js?v=2026.08.28-8').then(reg => {
+      navigator.serviceWorker.register('sw.js?v=2026.08.28-9').then(reg => {
         reg.update();
       }).catch(() => {});
     }
@@ -1220,15 +1220,29 @@
     updateSunsetCountdown();
     setInterval(updateSunsetCountdown, 60000);
 
+    // Send High-Priority Push Notification to Lock Screen
+    function sendPushAlert(target, title, message) {
+      const topic = target === "talkall" ? `fr_channel_${activeChannel}_push` : `fr_ping_${target}_direct`;
+      fetch(`https://ntfy.sh/${topic}`, {
+        method: 'POST',
+        headers: {
+          'Title': title,
+          'Priority': 'urgent',
+          'Tags': 'radio,loudspeaker,rotating_light',
+          'Click': window.location.href
+        },
+        body: message
+      }).catch(() => {});
+    }
+
     // Send "Turn on the App" Wake Ping
     window.sendWakeUpPing = function(target) {
       if (!isPoweredOn) return alert("Power on the radio first.");
       const contactName = target === "talkall" ? "BROADCAST (ALL)" : (userMap[target] || target);
-      const wakeText = `⚠️ TURN ON THE APP! ${myDisplayName} is calling for you on Friend Radio!`;
+      const wakeText = `⚠️ TURN ON THE APP! ${myDisplayName} is paging you on Friend Radio!`;
       
-      sendPushAlert(target, `🚨 WAKE UP & OPEN FRIEND RADIO`, `${myDisplayName} is paging you! Tap here to open.`);
+      sendPushAlert(target, `🚨 WAKE UP & OPEN FRIEND RADIO`, `${myDisplayName} is paging you! Tap to open radio.`);
 
-      // Store in retained offline mailbox
       const payload = new Paho.MQTT.Message(JSON.stringify({
         type: "WAKE_UP_ALERT",
         sender: myId,
@@ -1243,16 +1257,17 @@
 
       playChirp("buzz");
       triggerHaptic([60, 40, 60]);
-      log(`📢 Wake-up Alert sent to ${contactName}`);
+      log(`📢 Wake-up alert beamed to ${contactName}`);
     };
 
     // Repeating Alert Loop Handlers
     window.startRepeatingAlert = function(phrase, label) {
       if (!isPoweredOn) return alert("Power on the radio first.");
       
-      const destination = selectedTarget === "talkall"
-        ? `friendradio/channel/${activeChannel}`
-        : `friendradio/direct/${selectedTarget}`;
+      const isDirect = (selectedTarget !== "talkall");
+      const destination = isDirect
+        ? `friendradio/direct/${selectedTarget}`
+        : `friendradio/channel/${activeChannel}`;
 
       const payload = new Paho.MQTT.Message(JSON.stringify({
         type: "START_REPEATING_ALERT",
@@ -1265,25 +1280,25 @@
       payload.destinationName = destination;
       mqttClient.send(payload);
 
-      // Also retain in offline mailbox so they hear it upon powering on
       const retainedInbox = new Paho.MQTT.Message(JSON.stringify({
         type: "OFFLINE_MISSED_ALERT",
         sender: myId,
         senderName: myDisplayName,
+        target: selectedTarget,
         phrase: phrase,
         label: label,
         timestamp: Date.now()
       }));
       retainedInbox.retained = true;
-      retainedInbox.destinationName = selectedTarget === "talkall" ? `friendradio/inbox/all` : `friendradio/inbox/${selectedTarget}`;
+      retainedInbox.destinationName = isDirect ? `friendradio/inbox/${selectedTarget}` : `friendradio/inbox/all`;
       mqttClient.send(retainedInbox);
 
-      sendPushAlert(selectedTarget, `🚨 CREW ALERT: ${label}`, `${myDisplayName} sent alert: ${phrase}`);
+      sendPushAlert(selectedTarget, `🚨 CREW ALERT: ${label}`, `${myDisplayName} sent repeating alert: "${phrase}"`);
       
-      if (selectedTarget === "talkall") {
+      if (!isDirect) {
         runLocalAlertLoop(phrase, label, myDisplayName);
       } else {
-        log(`🚨 Alert [${label}] sent to ${userMap[selectedTarget] || selectedTarget}`);
+        log(`🚨 Direct alert [${label}] sent to ${userMap[selectedTarget] || selectedTarget}`);
         playChirp("roger");
       }
     };
@@ -1315,9 +1330,8 @@
           mqttClient.send(directStop);
         }
 
-        // Clear retained offline alert
         clearRetainedInbox(selectedTarget);
-        log("🛑 Alert loop stopped & cleared from inbox.");
+        log("🛑 Alert loop stopped.");
       }
     };
 
@@ -1711,15 +1725,6 @@
       }
     });
 
-    function sendPushAlert(target, title, message) {
-      const topic = target === "talkall" ? `fr_channel_${activeChannel}_push` : `fr_ping_${target}_direct`;
-      fetch(`https://ntfy.sh/${topic}`, {
-        method: 'POST',
-        headers: { 'Title': title, 'Priority': 'urgent', 'Tags': 'radio,loudspeaker' },
-        body: message
-      }).catch(() => {});
-    }
-
     function speakPhrase(phrase) {
       if ('speechSynthesis' in window) {
         window.speechSynthesis.cancel();
@@ -1941,10 +1946,11 @@
       log(`⚡ Buzz sent to ${target === 'talkall' ? 'CHANNEL' : userMap[target]}`);
     }
 
-    // Direct Text Messages with Offline Mailbox Retention
     function sendDirectTextMessage(target, text) {
       sendPushAlert(target, `💬 ${myDisplayName}`, text);
-      const topic = target === "talkall" ? `friendradio/channel/${activeChannel}` : `friendradio/direct/${target}`;
+      const isDirect = (target !== "talkall");
+      const topic = isDirect ? `friendradio/direct/${target}` : `friendradio/channel/${activeChannel}`;
+      
       const msgPayload = new Paho.MQTT.Message(JSON.stringify({
         type: "TEXT_MESSAGE",
         sender: myId,
@@ -1956,7 +1962,6 @@
       msgPayload.destinationName = topic;
       mqttClient.send(msgPayload);
 
-      // Store in Retained Offline Inbox
       const inboxMsg = new Paho.MQTT.Message(JSON.stringify({
         type: "OFFLINE_MISSED_MESSAGE",
         sender: myId,
@@ -1966,7 +1971,7 @@
         timestamp: Date.now()
       }));
       inboxMsg.retained = true;
-      inboxMsg.destinationName = target === "talkall" ? `friendradio/inbox/all` : `friendradio/inbox/${target}`;
+      inboxMsg.destinationName = isDirect ? `friendradio/inbox/${target}` : `friendradio/inbox/all`;
       mqttClient.send(inboxMsg);
 
       log(`💬 Sent to ${target === 'talkall' ? 'ALL' : userMap[target]}: "${text}"`);
@@ -2044,7 +2049,6 @@
         voiceMsg.destinationName = topic;
         mqttClient.send(voiceMsg);
 
-        // Retain latest voice mail in offline inbox
         const offlineVoice = new Paho.MQTT.Message(JSON.stringify({
           type: "OFFLINE_VOICEMAIL",
           sender: myId,
@@ -2103,7 +2107,6 @@
             runLocalAlertLoop(payload.phrase, payload.label, payload.senderName);
           }
 
-          // Clear delivered message so it doesn't repeat on subsequent refreshes
           clearRetainedInbox(myId);
           return;
         }
@@ -2142,8 +2145,11 @@
 
         // Repeating Alert Remote Start / Stop
         if (payload.type === "START_REPEATING_ALERT") {
-          runLocalAlertLoop(payload.phrase, payload.label, payload.senderName);
-          log(`🚨 REPEATING ALERT from ${payload.senderName}: "${payload.label}"`);
+          // Verify if it's direct to me or a broadcast
+          if (payload.target === "talkall" || payload.target === myId) {
+            runLocalAlertLoop(payload.phrase, payload.label, payload.senderName);
+            log(`🚨 REPEATING ALERT from ${payload.senderName}: "${payload.label}"`);
+          }
           return;
         }
 
