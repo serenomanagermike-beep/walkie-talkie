@@ -155,6 +155,47 @@
       box-shadow: 0 0 12px rgba(239, 68, 68, 0.7);
     }
 
+    /* Repeating Broadcast Alert Banner */
+    .alert-loop-banner {
+      display: none;
+      width: 100%;
+      max-width: 400px;
+      background: linear-gradient(180deg, #ef4444 0%, #b91c1c 100%);
+      border: 2px solid #fef08a;
+      border-radius: 8px;
+      padding: 6px 10px;
+      margin-bottom: 6px;
+      text-align: center;
+      animation: alertFlash 0.8s infinite alternate;
+      box-shadow: 0 0 20px rgba(239, 68, 68, 0.9);
+    }
+    .alert-loop-banner.active { display: flex; flex-direction: column; gap: 4px; }
+    .alert-loop-title {
+      font-family: 'Chakra Petch', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 800;
+      color: #ffffff;
+      letter-spacing: 1px;
+    }
+    .stop-loop-btn {
+      background: #fef08a;
+      color: #0f172a;
+      border: none;
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-family: 'Chakra Petch', sans-serif;
+      font-size: 0.75rem;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+    }
+    .stop-loop-btn:active { transform: scale(0.96); }
+
+    @keyframes alertFlash {
+      from { transform: scale(0.99); filter: brightness(0.9); }
+      to { transform: scale(1.01); filter: brightness(1.2); }
+    }
+
     .screen {
       background: rgba(8, 47, 73, 0.88);
       border: 1.5px solid rgba(56, 189, 248, 0.45);
@@ -400,6 +441,39 @@
       background: #38bdf8;
       transition: width 0.05s ease;
     }
+
+    /* Repeating Loop Alert Buttons */
+    .loop-alert-grid {
+      width: 100%;
+      max-width: 400px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5px;
+      margin-bottom: 5px;
+    }
+    .loop-alert-btn {
+      background: linear-gradient(180deg, #b45309 0%, #78350f 100%);
+      border: 1px solid #f59e0b;
+      color: #fef08a;
+      border-radius: 8px;
+      padding: 6px 4px;
+      font-family: 'Chakra Petch', sans-serif;
+      font-size: 0.72rem;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      letter-spacing: 0.5px;
+    }
+    .loop-alert-btn.letsgo {
+      background: linear-gradient(180deg, #c026d3 0%, #86198f 100%);
+      border-color: #f0abfc;
+      color: #ffffff;
+    }
+    .loop-alert-btn:active { transform: scale(0.96); }
 
     .soundboard-row {
       width: 100%;
@@ -689,6 +763,12 @@
     </div>
   </div>
 
+  <!-- Active Repeating Alert Loop Banner -->
+  <div id="alertLoopBanner" class="alert-loop-banner">
+    <div id="alertLoopText" class="alert-loop-title">🚨 REPEATING CREW ALERT ACTIVE</div>
+    <button id="stopLoopBtn" class="stop-loop-btn" onclick="stopActiveAlertLoop(true)">🛑 STOP ALERT LOOP</button>
+  </div>
+
   <!-- Sub-Channels / Groups -->
   <div class="channel-tabs">
     <button class="tab-btn active" data-channel="main">🌐 MAIN CREW</button>
@@ -902,6 +982,16 @@
     </div>
   </div>
 
+  <!-- Repeating Crew Alert Buttons -->
+  <div class="loop-alert-grid">
+    <button class="loop-alert-btn" onclick="startRepeatingAlert('I\'m hungry', '🍔 I\'M HUNGRY')">
+      🍔 I'M HUNGRY
+    </button>
+    <button class="loop-alert-btn letsgo" onclick="startRepeatingAlert('Let\'s go!', '⚡ LET\'S GO!')">
+      ⚡ LET'S GO!
+    </button>
+  </div>
+
   <!-- Quick Soundboard Buttons -->
   <div class="soundboard-row">
     <button class="soundboard-btn" onclick="sendQuickSound('10-4, Copy That!')">📻 10-4 Copy</button>
@@ -1008,7 +1098,7 @@
     }
 
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js?v=2026.08.28-5').then(reg => {
+      navigator.serviceWorker.register('sw.js?v=2026.08.28-6').then(reg => {
         reg.update();
       }).catch(() => {});
     }
@@ -1037,6 +1127,10 @@
     const presenceTimers = {};
     const mutedUsers = new Set();
     const hiddenUsers = new Set();
+
+    // Repeating Loop Alert State
+    let repeatingAlertTimer = null;
+    let currentRepeatingPhrase = null;
 
     // Last Seen Tracking Data Store
     let userPresenceHistory = {};
@@ -1067,6 +1161,8 @@
     const filterLabel = document.getElementById("filterLabel");
     const volBoostSlider = document.getElementById("volBoostSlider");
     const volBoostLabel = document.getElementById("volBoostLabel");
+    const alertLoopBanner = document.getElementById("alertLoopBanner");
+    const alertLoopText = document.getElementById("alertLoopText");
 
     // Modal Elements
     const radarOpenBtn = document.getElementById("radarOpenBtn");
@@ -1100,6 +1196,63 @@
     }
     updateSunsetCountdown();
     setInterval(updateSunsetCountdown, 60000);
+
+    // Repeating Alert Loop Handlers
+    window.startRepeatingAlert = function(phrase, label) {
+      if (!isPoweredOn) return alert("Power on the radio first.");
+      
+      const payload = new Paho.MQTT.Message(JSON.stringify({
+        type: "START_REPEATING_ALERT",
+        sender: myId,
+        senderName: myDisplayName,
+        phrase: phrase,
+        label: label
+      }));
+      payload.destinationName = `friendradio/channel/${activeChannel}`;
+      mqttClient.send(payload);
+
+      sendPushAlert("talkall", `🚨 CREW ALERT: ${label}`, `${myDisplayName} triggered repeating alert: ${phrase}`);
+      runLocalAlertLoop(phrase, label, myDisplayName);
+      log(`🚨 Broadcasted repeating alert: [${label}]`);
+    };
+
+    window.stopActiveAlertLoop = function(broadcast = true) {
+      if (repeatingAlertTimer) {
+        clearInterval(repeatingAlertTimer);
+        repeatingAlertTimer = null;
+      }
+      currentRepeatingPhrase = null;
+      if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+      alertLoopBanner.classList.remove("active");
+
+      if (broadcast && mqttClient && mqttClient.isConnected()) {
+        const payload = new Paho.MQTT.Message(JSON.stringify({
+          type: "STOP_REPEATING_ALERT",
+          sender: myId,
+          senderName: myDisplayName
+        }));
+        payload.destinationName = `friendradio/channel/${activeChannel}`;
+        mqttClient.send(payload);
+        log("🛑 Alert loop stopped.");
+      }
+    };
+
+    function runLocalAlertLoop(phrase, label, senderName) {
+      stopActiveAlertLoop(false);
+      currentRepeatingPhrase = phrase;
+
+      alertLoopText.innerText = `🚨 ${senderName.toUpperCase()}: ${label}`;
+      alertLoopBanner.classList.add("active");
+
+      const playCycle = () => {
+        playChirp("buzz");
+        triggerHaptic([100, 50, 100]);
+        speakPhrase(`${phrase}`);
+      };
+
+      playCycle();
+      repeatingAlertTimer = setInterval(playCycle, 3200);
+    }
 
     // Format Relative Time
     function formatTimeAgo(timestamp) {
@@ -1346,7 +1499,6 @@
 
       const selectBtn = card.querySelector(".contact-btn");
       selectBtn.addEventListener("click", () => {
-        // Clear active class from EVERY card
         document.querySelectorAll(".contact-card").forEach(c => c.classList.remove("active"));
         card.classList.add("active");
         selectedTarget = target;
@@ -1650,6 +1802,7 @@
     });
 
     function shutdownRadio() {
+      stopActiveAlertLoop(false);
       if (wakeLock) { wakeLock.release().catch(() => {}); wakeLock = null; }
       stopVideoKeepAlive();
       if (gpsWatchId && 'geolocation' in navigator) {
@@ -1806,7 +1959,6 @@
           if (dot) dot.className = "presence-dot online";
           if (tag) tag.innerText = payload.status || "Online";
 
-          // Record last-seen timestamp & coords
           userPresenceHistory[uId] = {
             lastSeen: Date.now(),
             status: payload.status,
@@ -1814,7 +1966,6 @@
           };
           try { localStorage.setItem("fr_presence_history", JSON.stringify(userPresenceHistory)); } catch(e) {}
 
-          // Update Leaflet marker on radar
           if (payload.coords && payload.coords.lat && payload.coords.lng) {
             updateCrewMarker(uId, payload.userName || userMap[uId] || uId, payload.coords, payload.status, false, true);
           }
@@ -1829,6 +1980,19 @@
             }
             delete presenceTimers[uId];
           }, 35000);
+          return;
+        }
+
+        // Repeating Alert Remote Start / Stop
+        if (payload.type === "START_REPEATING_ALERT") {
+          runLocalAlertLoop(payload.phrase, payload.label, payload.senderName);
+          log(`🚨 REPEATING ALERT from ${payload.senderName}: "${payload.label}"`);
+          return;
+        }
+
+        if (payload.type === "STOP_REPEATING_ALERT") {
+          stopActiveAlertLoop(false);
+          log(`🛑 Alert loop cancelled by ${payload.senderName}`);
           return;
         }
 
@@ -1852,6 +2016,7 @@
             alert(`🚨 EMERGENCY ALL-CALL SIREN:\n\n${payload.reason}`);
           } else if (payload.cmd === "FORCE_CLEAR") {
             stopTransmit();
+            stopActiveAlertLoop(false);
             isChannelLocked = false;
             pttBtn.classList.remove("busy-locked");
             log("⚡ Line forced clear by Admin.");
